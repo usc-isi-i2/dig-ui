@@ -1,0 +1,336 @@
+<!--
+Copyright 2018 Next Century Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../../bower_components/paper-spinner/paper-spinner.html">
+<link rel="import" href="../../bower_components/stylized-icon/stylized-icon.html">
+
+<dom-module id="section-wrapper">
+  <template>
+    <style include="iron-flex iron-flex-alignment"></style>
+
+    <style>
+      :host {
+        display: block;
+      }
+
+      paper-material {
+        background-color: #fff;
+        display: block;
+        height: var(--section-wrapper-height, auto);
+        margin: var(--section-wrapper-margin, 0 0 5px);
+        min-height: var(--section-wrapper-min-height, none);
+      }
+
+      paper-material.selected,
+      paper-material.tappable:hover {
+        background-color: var(--paper-grey-100);
+      }
+
+      paper-spinner {
+        height: 20px;
+        width: 20px;
+      }
+
+      .section-content {
+        padding: var(--section-content-padding, 0 10px 10px);
+      }
+
+      .section-title {
+        padding: 10px;
+      }
+
+      .tappable .section-title {
+        cursor: pointer;
+      }
+
+      .status-icon {
+        margin: 0 5px;
+      }
+
+      .header-text {
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 20px;
+        margin-left: 10px;
+        margin-right: 10px;
+        /* Needed to fix flexbox layout issues in newer browsers. */
+        display: -webkit-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: normal;
+        word-break: break-word;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+      }
+    </style>
+
+    <paper-material class$="[[_isSelected(selected)]] [[_isTappable(error, loading, noData, tappable)]]" elevation="2">
+      <template is="dom-if" if="[[!hideSectionTitle]]">
+        <div class="section-title layout horizontal start center" on-tap="_updateTapped">
+          <stylized-icon class="header-icon" icon="[[icon]]" style-class="[[styleClass]]"></stylized-icon>
+
+          <div class="header-text flex" title$="[[sectionTitle]]">[[sectionTitle]]</div>
+
+          <slot name="title"></slot>
+
+          <template is="dom-if" if="[[loading]]">
+            <paper-spinner class="status-icon" active$="[[loading]]"></paper-spinner>
+          </template>
+
+          <template is="dom-if" if="[[showLoadIcon]]">
+            <template is="dom-if" if="[[!loading]]">
+              <template is="dom-if" if="[[!noData]]">
+                <stylized-icon active class="status-icon" icon="check-circle" title-tooltip="[[sectionTitle]]"></stylized-icon>
+              </template>
+              <template is="dom-if" if="[[noData]]">
+                <template is="dom-if" if="[[error]]">
+                  <stylized-icon active class="status-icon" icon="error" title-tooltip="[[sectionTitle]]"></stylized-icon>
+                </template>
+                <template is="dom-if" if="[[!error]]">
+                  <stylized-icon active class="status-icon" icon="block" title-tooltip="[[sectionTitle]]"></stylized-icon>
+                </template>
+              </template>
+            </template>
+          </template>
+        </div>
+      </template>
+
+      <template is="dom-if" if="[[!hideSectionContent]]">
+        <div class="section-content">
+          <slot></slot>
+        </div>
+      </template>
+    </paper-material>
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'section-wrapper',
+
+      properties: {
+        /**
+         * (Optional)
+         *
+         * The section error.
+         *
+         * @type {Object}
+         */
+        error: {
+          type: Object,
+        },
+
+        /**
+         * (Optional)
+         *
+         * Whether to hide the section content.
+         *
+         * @type {Boolean}
+         * @default false
+         */
+        hideSectionContent: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * (Optional)
+         *
+         * Whether to hide the section title.
+         *
+         * @type {Boolean}
+         * @default false
+         */
+        hideSectionTitle: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * (Optional)
+         *
+         * The section icon.
+         *
+         * @type {String}
+         * @default ''
+         */
+        icon: {
+          type: String,
+          value: ''
+        },
+
+        /**
+         * (Optional)
+         *
+         * Whether the data is loading.
+         *
+         * @type {Boolean}
+         * @default false
+         */
+        loading: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * (Optional)
+         *
+         * The section data name for the loading spinner.
+         *
+         * @type {String}
+         * @default 'Data'
+         */
+        name: {
+          type: String,
+          value: 'Data'
+        },
+
+        /**
+         * (Optional)
+         *
+         * Whether the section has no data.
+         *
+         * @type {Boolean}
+         * @default false
+         */
+        noData: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * (Optional|Output)
+         *
+         * The section title.
+         *
+         * @type {String}
+         * @default ''
+         */
+        sectionTitle: {
+          notify: true,
+          type: String,
+          value: ''
+        },
+
+        /**
+         * (Optional)
+         *
+         * Whether the section is selected.
+         *
+         * @type {Boolean}
+         * @default false
+         */
+        selected: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * (Optional)
+         *
+         * Whether to show the loading success or failure icons.
+         *
+         * @type {Boolean}
+         * @default false
+         */
+        showLoadIcon: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * (Optional)
+         *
+         * The section style class.
+         *
+         * @type {String}
+         * @default ''
+         */
+        styleClass: {
+          type: String,
+          value: ''
+        },
+
+        /**
+         * (Optional)
+         *
+         * Enables tap behavior.
+         *
+         * @type {Boolean}
+         * @default false
+         */
+        tappable: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * (Output)
+         *
+         * Whether the section title was clicked or tapped.
+         *
+         * @type {Boolean}
+         * @default false
+         */
+        tapped: {
+          notify: true,
+          type: Boolean,
+          value: false
+        }
+      },
+
+      /**
+       * Returns the selected style class if needed.
+       *
+       * @param {Boolean} selected
+       * @return {String}
+       * @private
+       */
+      _isSelected: function(selected) {
+        return selected ? 'selected' : '';
+      },
+
+      /**
+       * Returns the tappable style class if needed.
+       *
+       * @param {Object} error
+       * @param {Boolean} loading
+       * @param {Boolean} noData
+       * @param {Boolean} tappable
+       * @return {String}
+       * @private
+       */
+      _isTappable: function(error, loading, noData, tappable) {
+        return (!error && !loading && !noData && tappable ? 'tappable' : '');
+      },
+
+      /**
+       * Sets tapped to true then false.
+       *
+       * @private
+       */
+      _updateTapped: function() {
+        this.set('tapped', true);
+        this.set('tapped', false);
+      }
+    });
+  })();
+  </script>
+</dom-module>

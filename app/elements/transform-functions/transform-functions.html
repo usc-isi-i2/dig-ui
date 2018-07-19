@@ -1,5 +1,5 @@
 <!--
-Copyright 2017 Next Century Corporation
+Copyright 2018 Next Century Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,17 +16,18 @@ limitations under the License.
 
 <link rel="import" href="../../bower_components/polymer/polymer.html">
 <link rel="import" href="../../bower_components/moment-element/moment-with-locales-import.html">
-<link rel="import" href="../lodash.html">
+<link rel="import" href="../../bower_components/lodash-import/lodash.html">
 
 <script src="../../transforms/common-transforms.js" type="text/javascript"></script>
 <script src="../../transforms/config-transforms.js" type="text/javascript"></script>
 <script src="../../transforms/entity-transforms.js" type="text/javascript"></script>
+<script src="../../transforms/export-transforms.js" type="text/javascript"></script>
 <script src="../../transforms/search-transforms.js" type="text/javascript"></script>
 
 <script>
   (function() {
     Polymer({
-      /* globals _, moment, commonTransforms, configTransforms, entityTransforms, searchTransforms */
+      /* globals _, moment, commonTransforms, configTransforms, entityTransforms, exportTransforms, searchTransforms*/
       is: 'transform-functions',
 
       properties: {
@@ -39,7 +40,7 @@ limitations under the License.
         },
 
         esConfig: {
-          computed: '_initializeEsConfig(clientConfig, serverConfig)',
+          computed: '_initializeEsConfig(domain, clientConfig, serverConfig)',
           notify: true,
           readOnly: true,
           type: Object
@@ -50,35 +51,123 @@ limitations under the License.
         },
 
         transforms: {
-          computed: '_initializeTransforms(domain, esConfig)',
+          computed: '_initializeTransforms(domain, esConfig, serverConfig)',
           notify: true,
           readOnly: true,
           type: Object
         }
       },
 
-      _initializeEsConfig: function(clientConfig, serverConfig) {
+      _createImageFieldConfig: function() {
+        return {
+          key: 'image',
+          color: 'black',
+          facets: true,
+          field: 'objects.img_sha1',
+          group: 'Image',
+          icon: 'image:photo',
+          link: 'entity',
+          result: 'image',
+          search: true,
+          title: 'Image',
+          titlePlural: 'Images',
+          type: 'image'
+        };
+      },
+
+      _createWebpageFieldConfig: function(serverConfig) {
+        return {
+          key: 'webpage',
+          color: 'black',
+          facets: false,
+          field: serverConfig.resultQueryField,
+          group: '',
+          icon: serverConfig.resultIcon,
+          result: 'nested',
+          search: false,
+          title: serverConfig.resultNameSingular,
+          titlePlural: serverConfig.resultNamePlural,
+          type: 'kg_id'
+        };
+      },
+
+      _initializeEsConfig: function(domain, clientConfig, serverConfig) {
+        if(!domain || !clientConfig || !serverConfig) {
+          return undefined;
+        }
+
         /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
         var esConfig = {
-          esIndex: (clientConfig.index ? clientConfig.index.sample : '') || serverConfig.esIndex,
-          esType: clientConfig.root_name || serverConfig.esType
+          downloadImageUrl: serverConfig.downloadImageUrl ? ((serverConfig.pathPrefix || '/') + serverConfig.downloadImageUrl) : '',
+          enableNetworkExpansion: !serverConfig.sendSearchesDirectlyToES,
+          esIndex: (clientConfig.index && serverConfig.databaseType ? clientConfig.index[serverConfig.databaseType] : undefined),
+          esType: clientConfig.root_name,
+          hideCachedPage: serverConfig.hideCachedPage || false,
+          hideTimelines: clientConfig.hide_timelines || false,
+          imageField: this._createImageFieldConfig(),
+          imageUrlPrefix: clientConfig.image_prefix || serverConfig.imageUrlPrefix || '',
+          imageUrlSuffix: clientConfig.image_suffix || serverConfig.imageUrlSuffix || '',
+          newlineTag: clientConfig.newline_type === 'newline' ? '\n' : '<br/>',
+          revisions: serverConfig.revisionsField,
+          showImagesInFacets: clientConfig.show_images_in_facets || false,
+          showImagesInSearch: clientConfig.show_images_in_search_form || false,
+          showOriginalSearch: serverConfig.masterOverride || clientConfig.show_original_search === 'V1' || false,
+          showMultipleDescriptions: serverConfig.showMultipleDescriptions || false,
+          showMultipleTitles: serverConfig.showMultipleTitles || false,
+          timestamp: serverConfig.timestampField,
+          uid: serverConfig.uidField,
+          webpageField: this._createWebpageFieldConfig(serverConfig)
         };
         /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
-        if(serverConfig.esDataEndpoint) {
-          var slash = serverConfig.esDataEndpoint.lastIndexOf('/') === (serverConfig.esDataEndpoint.length - 1) ? '' : '/';
-          esConfig.esDataEndpoint = serverConfig.esDataEndpoint + slash + esConfig.esIndex + '/' + esConfig.esType + '/';
+
+        if(!serverConfig.sendSearchesDirectlyToES) {
+          if(serverConfig.overrideSearchEndpoint) {
+            if(_.isString(serverConfig.overrideSearchEndpoint)) {
+              esConfig.searchEndpoint = serverConfig.overrideSearchEndpoint;
+            }
+            if(_.isObject(serverConfig.overrideSearchEndpoint) && serverConfig.overrideSearchEndpoint[domain]) {
+              esConfig.searchEndpoint = serverConfig.overrideSearchEndpoint[domain];
+            }
+          }
+
+          if(!esConfig.searchEndpoint && clientConfig.configuration && serverConfig.databaseType) {
+            esConfig.searchEndpoint = clientConfig.configuration['sandpaper_' + serverConfig.databaseType + '_url'];
+
+            if(serverConfig.searchConfig) {
+              esConfig.searchEndpoint = (serverConfig.searchConfig[esConfig.searchEndpoint] || serverConfig.searchConfig[domain]) + '?project=' + domain;
+            } else {
+              esConfig.searchEndpoint = esConfig.searchEndpoint + '/search/coarse?project=' + domain;
+            }
+          }
+
+          if(esConfig.searchEndpoint && esConfig.searchEndpoint.indexOf('/') === 0) {
+            esConfig.searchEndpoint = (serverConfig.pathPrefix || '/') + esConfig.searchEndpoint.slice(1);
+          }
         }
+
+        if(serverConfig.esHost && serverConfig.esHost.host && esConfig.esIndex && esConfig.esType) {
+          var slash = serverConfig.esHost.host.lastIndexOf('/') === (serverConfig.esHost.host.length - 1) ? '' : '/';
+          esConfig.esDataEndpoint = serverConfig.showEsData ? (serverConfig.esHost.host + slash + esConfig.esIndex + '/' + esConfig.esType + '/') : undefined;
+        }
+
+        console.log('config', esConfig);
+
         return esConfig;
       },
 
-      _initializeTransforms: function(domain, esConfig) {
-        var util = commonTransforms(_, moment, domain);
+      _initializeTransforms: function(domain, esConfig, serverConfig) {
+        if(!domain || !esConfig || !serverConfig) {
+          return undefined;
+        }
+
+        var util = commonTransforms(_, moment, domain, serverConfig.pathPrefix || '/');
 
         var transforms = {};
 
-        transforms.config = configTransforms(_, util);
+        transforms.config = configTransforms(_, util, esConfig);
         transforms.entity = entityTransforms(_, util, esConfig);
-        transforms.search = searchTransforms(_);
+        transforms.export = exportTransforms(_, esConfig);
+        transforms.search = searchTransforms(_, esConfig);
 
         return transforms;
       }

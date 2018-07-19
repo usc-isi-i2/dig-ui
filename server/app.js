@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Next Century Corporation
+ * Copyright 2018 Next Century Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,13 @@
 // Set default node environment to development
 process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
-var express = require('express');
 var config = require('./config/environment');
+var express = require('express');
+var http = require('http');
+
 // Setup server
 var app = express();
-var server = require('http').createServer(app);
+var server = http.createServer(app);
 require('./config/express')(app);
 require('./routes')(app);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Next Century Corporation
+ * Copyright 2018 Next Century Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,106 @@
 /* exported commonTransforms */
 /* jshint camelcase:false */
 
-var commonTransforms = (function(_, moment, domain) {
+var commonTransforms = (function(_, moment, domain, pathPrefix) {
+  /**
+   * Returns the JS Date object for the given date string and the given date interval (hour/day/week/month/year).
+   */
+  function getDateForInterval(dateString, interval) {
+    if(dateString) {
+      var dateObject = new Date(dateString);
+      if(interval !== 'hour') {
+        dateObject.setUTCHours(0);
+      }
+      var momentObject = moment.utc(dateObject);
+      if(interval === 'week') {
+        momentObject.isoWeekday(1);
+      }
+      if(interval === 'month') {
+        momentObject.date(1);
+      }
+      if(interval === 'year') {
+        momentObject.dayOfYear(1);
+      }
+      return momentObject.toDate();
+    }
+    return null;
+  }
+
+  /**
+   * Returns the hex color for the given color.
+   */
+  function getHexColor(color) {
+    if(color === 'amber') {
+      return '#ffb300'; /* paper-amber-600 */
+    }
+    if(color === 'blue') {
+      return '#1e88e5'; /* paper-blue-600 */
+    }
+    if(color === 'blue-grey') {
+      return '#546e7a'; /* paper-blue-grey-600 */
+    }
+    if(color === 'brown') {
+      return '#6d4c41'; /* paper-brown-600 */
+    }
+    if(color === 'cyan') {
+      return '#00acc1'; /* paper-cyan-600 */
+    }
+    if(color === 'deep-orange') {
+      return '#f4511e'; /* paper-deep-orange-600 */
+    }
+    if(color === 'deep-purple') {
+      return '#5e35b1'; /* paper-deep-purple-600 */
+    }
+    if(color === 'green') {
+      return '#43a047'; /* paper-green-600 */
+    }
+    if(color === 'grey') {
+      return '#757575'; /*paper-grey-600 */
+    }
+    if(color === 'indigo') {
+      return '#3949ab'; /* paper-indigo-600 */
+    }
+    if(color === 'light-blue') {
+      return '#039be5';  /* paper-light-blue-600 */
+    }
+    if(color === 'light-green') {
+      return '#7cb342'; /* paper-light-green-600 */
+    }
+    if(color === 'lime') {
+      return '#c0ca33'; /* paper-lime-600 */
+    }
+    if(color === 'orange') {
+      return '#fb8c00'; /* paper-orange-600 */
+    }
+    if(color === 'pink') {
+      return '#d81b60'; /* paper-pink-600 */
+    }
+    if(color === 'purple') {
+      return '#8e24aa'; /* paper-purple-600 */
+    }
+    if(color === 'red') {
+      return '#e53935'; /* paper-red-600 */
+    }
+    if(color === 'teal') {
+      return '#00897b'; /* paper-teal-600 */
+    }
+    if(color === 'white') {
+      return '#ffffff';
+    }
+    if(color === 'yellow') {
+      return '#fdd835'; /* paper-yellow-600 */
+    }
+    return '#212121'; /*paper-grey-900 */
+  }
+
   /**
    * Returns the formatted string for the given date number/string in UTC format.
    */
-  function getFormattedDate(date) {
-    return date ? moment.utc(new Date(date)).format('MMM D, YYYY') : 'No Date';
+  function getFormattedDate(dateString, interval) {
+    if(dateString) {
+      return moment.utc(getDateForInterval(dateString, interval)).format('MMM D, YYYY');
+    }
+    return 'None';
   }
 
   /**
@@ -42,25 +136,45 @@ var commonTransforms = (function(_, moment, domain) {
   }
 
   /**
-   * Returns the link for the given key.
+   * Returns the source URL for the image with the given ID using the given config.
    */
-  function getLink(key, link, type) {
-    if(type === 'document') {
-      return '/document.html?domain=' + domain + '&id=' + key;
+  function getImageUrl(id, config) {
+    if(!config) {
+      return id;
     }
-    if(key && link === 'entity') {
-      if(type === 'email') {
-        return '/entity.html?domain=' + domain + '&id=' + encodeURIComponent(key) + '&type=' + type;
-      }
-      return '/entity.html?domain=' + domain + '&id=' + key + '&type=' + type;
+    return (config.imageUrlPrefix || '') + ('' + id).toUpperCase() + (config.imageUrlSuffix || '');
+  }
+
+  /**
+   * Returns the link for the given ID.
+   */
+  function getLink(itemId, linkType, fieldType, fieldId) {
+    if(linkType === 'cached') {
+      return pathPrefix + 'cached.html?' + (domain ? 'domain=' + domain : '') + '&id=' + itemId;
+    }
+    if(linkType === 'result') {
+      return pathPrefix + 'result.html?' + (domain ? 'domain=' + domain : '') + '&id=' + itemId;
+    }
+    if(itemId && linkType === 'entity') {
+      return pathPrefix + 'entity.html?' + (domain ? 'domain=' + domain : '') + '&id=' + encodeURIComponent(itemId) + '&type=' + fieldId;
     }
     return undefined;
   }
 
   /**
+   * Returns the link function for the field with the given settings.
+   */
+  function getLinkFunction(linkType, fieldType, fieldId) {
+    return function(id) {
+      return getLink(id, linkType, fieldType, fieldId);
+    };
+  }
+
+  /**
    * Returns the location data from the given location key formatted as city:state:country:longitude:latitude.
    */
-  function getLocationDataFromKey(key) {
+  function getLocationDataFromKey(rawKey) {
+    var key = decodeURIComponent(rawKey);
     var keySplit = key ? key.split(':') : [];
 
     if(keySplit.length < 5) {
@@ -75,7 +189,7 @@ var commonTransforms = (function(_, moment, domain) {
     var country = keySplit.length > 2 ? keySplit[2] : undefined;
     var longitude = keySplit.length > 3 ? keySplit[3] : undefined;
     var latitude = keySplit.length > 4 ? keySplit[4] : undefined;
-    var text = city ? (city + (state ? (', ' + state) : '')) : 'No Location';
+    var text = city ? (city + (state ? (', ' + state) : '')) : 'None';
 
     return {
       city: city,
@@ -91,7 +205,7 @@ var commonTransforms = (function(_, moment, domain) {
    * Returns the style class for the given color.
    */
   function getStyleClass(color) {
-    return color ? ('entity-' + color.replace(/ /g, '-')) : '';
+    return color ? (color.replace(/ /g, '-')) : '';
   }
 
   /**
@@ -117,7 +231,7 @@ var commonTransforms = (function(_, moment, domain) {
     var keySplit = key ? key.split('-') : [];
 
     if(keySplit.length < 2) {
-      return undefined;
+      return keySplit.length ? keySplit[0] : undefined;
     }
 
     var text = keySplit[0];
@@ -160,6 +274,9 @@ var commonTransforms = (function(_, moment, domain) {
    * Returns the ID for the facets data with the given key and type.
    */
   function getFacetsDataId(key, type) {
+    if(type === 'id') {
+      return key.substring(0, key.indexOf('-'));
+    }
     if(type === 'email') {
       return decodeURIComponent(key);
     }
@@ -168,9 +285,15 @@ var commonTransforms = (function(_, moment, domain) {
       var keySplit = key.split('-');
       return keySplit.length ? keySplit[0] : '';
     }
+    if(type === 'image') {
+      return key;
+    }
     if(type === 'location') {
       // Return just the city rather than the complete formatted location key.
       return getLocationDataFromKey(key).city;
+    }
+    if(type === 'number') {
+      return key;
     }
     if(type === 'username') {
       // Formatted <website> <username>
@@ -184,6 +307,9 @@ var commonTransforms = (function(_, moment, domain) {
    * Returns the text for the facets data with the given key and type.
    */
   function getFacetsDataText(key, type) {
+    if(type === 'id') {
+      return key.substring(0, key.indexOf('-'));
+    }
     if(type === 'date') {
       return getFormattedDate(key);
     }
@@ -193,8 +319,14 @@ var commonTransforms = (function(_, moment, domain) {
     if(type === 'hyphenated') {
       return getTextFromHyphenatedKey(key);
     }
+    if(type === 'image') {
+      return key.substring(key.lastIndexOf('/') + 1);
+    }
     if(type === 'location') {
       return getLocationDataFromKey(key).text;
+    }
+    if(type === 'number') {
+      return key;
     }
     if(type === 'phone') {
       return getFormattedPhone(key);
@@ -206,6 +338,9 @@ var commonTransforms = (function(_, moment, domain) {
    * Returns the ID for the extraction data with the given key, value, and type.
    */
   function getExtractionDataId(key, value, type) {
+    if(type === 'id') {
+      return value;
+    }
     if(type === 'email') {
       return decodeURIComponent(key || value);
     }
@@ -216,6 +351,9 @@ var commonTransforms = (function(_, moment, domain) {
    * Returns the text for the extraction data with the given key, value, type, and index.
    */
   function getExtractionDataText(key, value, type, index) {
+    if(type === 'id') {
+      return value;
+    }
     if(type === 'date') {
       return getFormattedDate(value || key);
     }
@@ -226,9 +364,9 @@ var commonTransforms = (function(_, moment, domain) {
       return getTextFromHyphenatedKey(key) || value;
     }
     if(type === 'image') {
-      return 'Image #' + (index + 1);
+      return 'Image' + (index >= 0 ? (' #' + (index + 1)) : '');
     }
-    if(type === 'location') {
+    if(type === 'city' || type === 'location') {
       return getLocationDataFromKey(key).text || value;
     }
     if(type === 'phone') {
@@ -238,10 +376,17 @@ var commonTransforms = (function(_, moment, domain) {
   }
 
   /**
+   * Returns whether the given extraction has the required properties (an ID).
+   */
+  function isGoodExtraction(object) {
+    return object.id;
+  }
+
+  /**
    * Returns whether the given location data object has the required properties.
    */
   function isGoodLocation(location) {
-    return location.latitude && location.longitude && location.text;
+    return location.id && location.latitude && location.longitude && location.text;
   }
 
   /**
@@ -249,12 +394,9 @@ var commonTransforms = (function(_, moment, domain) {
    */
   function getExtractionFilterFunction(type) {
     if(type === 'location') {
-      // TODO Filter out bad locations once the data can support it.
-      //return isGoodLocation;
+      return isGoodLocation;
     }
-    return function() {
-      return true;
-    };
+    return isGoodExtraction;
   }
 
   /**
@@ -262,6 +404,20 @@ var commonTransforms = (function(_, moment, domain) {
   * to names preferred by the user.
   */
   return {
+    /**
+     * Returns the JS Date object for the given date string and the given date interval (hour/day/week/month/year).
+     */
+    getDateForInterval: function(dateString, interval) {
+      return getDateForInterval(dateString, interval);
+    },
+
+    /**
+     * Returns the hex color for the given color.
+     */
+    getHexColor: function(color) {
+      return getHexColor(color);
+    },
+
     /**
      * Returns the ID for the facets data with the given key and type.
      */
@@ -300,8 +456,8 @@ var commonTransforms = (function(_, moment, domain) {
     /**
      * Returns the formatted string for the given date number/string in UTC format.
      */
-    getFormattedDate: function(date) {
-      return getFormattedDate(date);
+    getFormattedDate: function(dateString, interval) {
+      return getFormattedDate(dateString, interval);
     },
 
     /**
@@ -312,10 +468,24 @@ var commonTransforms = (function(_, moment, domain) {
     },
 
     /**
-     * Returns the link for the given key.
+     * Returns the source URL for the image with the given ID using the given config.
      */
-    getLink: function(key, link, type) {
-      return getLink(key, link, type);
+    getImageUrl: function(id, config) {
+      return getImageUrl(id, config);
+    },
+
+    /**
+     * Returns the link for the given ID.
+     */
+    getLink: function(itemId, linkType, fieldType, fieldId) {
+      return getLink(itemId, linkType, fieldType, fieldId);
+    },
+
+    /**
+     * Returns the link function for the field with the given settings.
+     */
+    getLinkFunction: function(linkType, fieldType, fieldId) {
+      return getLinkFunction(linkType, fieldType, fieldId);
     },
 
     /**

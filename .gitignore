@@ -1,7 +1,12 @@
 bower_components
 dist
 node_modules
+package-lock.json
+/app/help.html
+/app/help/*
+/app/images/help/*
 /server/client-config-*.json
-/server/config/local.env.js
+/server/config/*local.env.js
 *.swp
 .tmp
+*.csv

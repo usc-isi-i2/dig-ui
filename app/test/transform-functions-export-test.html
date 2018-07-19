@@ -1,0 +1,953 @@
+<!--
+Copyright 2018 Next Century Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <title>transform-functions-export</title>
+  <script src="../bower_components/webcomponentsjs/webcomponents-lite.js"></script>
+  <script src="../bower_components/web-component-tester/browser.js"></script>
+  <link rel="import" href="../elements/transform-functions/transform-functions.html">
+</head>
+
+<body>
+<test-fixture id="transform-functions-fixture">
+  <template>
+    <transform-functions></transform-functions>
+  </template>
+</test-fixture>
+
+<script>
+  'use strict';
+  /* globals suite, setup, fixture, test, expect */
+  /* jshint -W030 */
+  suite('transform-functions export transforms initialization tests', function() {
+    var transformFunctions;
+
+    setup(function() {
+      transformFunctions = fixture('transform-functions-fixture');
+      transformFunctions.domain = 'domain';
+      transformFunctions.clientConfig = {};
+      transformFunctions.serverConfig = {
+        resultNameSingular: 'TestResult'
+      };
+    });
+
+    test('does define transforms object', function() {
+      expect(transformFunctions.transforms).to.be.an('Object');
+    });
+
+    test('does define export object', function() {
+      expect(transformFunctions.transforms.export).to.be.an('Object');
+    });
+
+    test('createBulkSearchData given no search parameters or fields does return expected array', function() {
+      var output = transformFunctions.transforms.export.createBulkSearchData({}, []);
+      expect(output).to.deep.equal([]);
+    });
+
+    test('createBulkSearchData given search parameters and fields does return expected array', function() {
+      var output = transformFunctions.transforms.export.createBulkSearchData({
+        date: {
+          'Jan 1 2018': {
+            enabled: true,
+            key: 'Jan 1 2018'
+          }
+        },
+        email: {
+          'abc@xyz.com': {
+            enabled: true,
+            key: 'abc@xyz.com'
+          }
+        },
+        location: {
+          'United States': {
+            enabled: true,
+            key: 'United States'
+          }
+        },
+        phone: {
+          '123-456-7890': {
+            enabled: true,
+            key: '123-456-7890'
+          }
+        }
+      }, [{
+        key: 'date',
+        queryField: 'dateField',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        queryField: 'locationField',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        queryField: 'phoneField',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        queryField: 'emailField',
+        title: 'Emails'
+      }]);
+
+      expect(output).to.deep.equal([{
+        field: 'dateField',
+        value: 'Jan 1 2018'
+      }, {
+        field: 'locationField',
+        value: 'United States'
+      }, {
+        field: 'phoneField',
+        value: '123-456-7890'
+      }, {
+        field: 'emailField',
+        value: 'abc@xyz.com'
+      }]);
+    });
+
+    test('createBulkSearchData given multiple search parameters of same type does return expected array', function() {
+      var output = transformFunctions.transforms.export.createBulkSearchData({
+        phone: {
+          '123-456-7890': {
+            enabled: true,
+            key: '123-456-7890'
+          },
+          '987-654-3210': {
+            enabled: true,
+            key: '987-654-3210'
+          }
+        }
+      }, [{
+        key: 'date',
+        queryField: 'dateField',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        queryField: 'locationField',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        queryField: 'phoneField',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        queryField: 'emailField',
+        title: 'Emails'
+      }]);
+
+      expect(output).to.deep.equal([{
+        field: 'phoneField',
+        value: '123-456-7890'
+      }, {
+        field: 'phoneField',
+        value: '987-654-3210'
+      }]);
+    });
+
+    test('createBulkSearchData does ignore disabled search parameters', function() {
+      var output = transformFunctions.transforms.export.createBulkSearchData({
+        email: {
+          'abc@xyz.com': {
+            enabled: false,
+            key: 'abc@xyz.com'
+          }
+        },
+        phone: {
+          '123-456-7890': {
+            enabled: true,
+            key: '123-456-7890'
+          },
+          '987-654-3210': {
+            enabled: false,
+            key: '987-654-3210'
+          }
+        }
+      }, [{
+        key: 'date',
+        queryField: 'dateField',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        queryField: 'locationField',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        queryField: 'phoneField',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        queryField: 'emailField',
+        title: 'Emails'
+      }]);
+
+      expect(output).to.deep.equal([{
+        field: 'phoneField',
+        value: '123-456-7890'
+      }]);
+    });
+
+    test('createExportDataForCsv given no data or search fields does return expected array', function() {
+      var output = transformFunctions.transforms.export.createExportDataForCsv([], []);
+      expect(output).to.deep.equal([['TestResult', 'DIG URL', 'Title', 'Description', 'Images']]);
+    });
+
+    test('createExportDataForCsv given data and search fields does return expected array', function() {
+      var output = transformFunctions.transforms.export.createExportDataForCsv([{
+        description: 'Test description.',
+        link: '/result.html?id=1234',
+        title: 'Test Title',
+        url: 'google.com',
+        detailExtractions: [{
+          key: 'phone',
+          data: [{
+            text: '123-456-7890'
+          }]
+        }, {
+          key: 'email',
+          data: [{
+            text: 'abc@xyz.com'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'date',
+          data: [{
+            text: 'Jan 1 2018'
+          }]
+        }, {
+          key: 'location',
+          data: [{
+            text: 'United States'
+          }]
+        }],
+        images: [{
+          downloadSource: 'downloadImage',
+          source: 'imageUrl'
+        }]
+      }], [{
+        key: 'date',
+        result: 'header',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        result: 'header',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        result: 'detail',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        result: 'detail',
+        title: 'Emails'
+      }]);
+
+      expect(output.length).to.equal(2);
+      expect(output[0]).to.deep.equal(['TestResult', 'DIG URL', 'Title', 'Dates', 'Locations', 'Phones', 'Emails', 'Description', 'Images']);
+      expect(output[1].length).to.equal(9);
+      expect(output[1][0]).to.equal('google.com');
+      expect(output[1][1]).to.equal(window.location.hostname + ':' + window.location.port + '/result.html?id=1234');
+      expect(output[1][2]).to.equal('Test Title');
+      expect(output[1][3]).to.equal('Jan 1 2018');
+      expect(output[1][4]).to.equal('United States');
+      expect(output[1][5]).to.equal('123-456-7890');
+      expect(output[1][6]).to.equal('abc@xyz.com');
+      expect(output[1][7]).to.equal('Test description.');
+      expect(output[1][8]).to.equal('imageUrl');
+    });
+
+    test('createExportDataForCsv given lots of data and search fields does return expected array', function() {
+      var output = transformFunctions.transforms.export.createExportDataForCsv([{
+        description: 'Test description 1.',
+        link: '/result.html?id=1234',
+        title: 'Test Title 1',
+        url: 'google.com',
+        detailExtractions: [{
+          key: 'phone',
+          data: [{
+            text: '123-456-7890'
+          }]
+        }, {
+          key: 'email',
+          data: [{
+            text: 'abc@xyz.com'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'date',
+          data: [{
+            text: 'Jan 1 2018'
+          }]
+        }, {
+          key: 'location',
+          data: [{
+            text: 'United States'
+          }]
+        }],
+        images: [{
+          downloadSource: 'downloadImage1',
+          source: 'imageUrl1'
+        }]
+      }, {
+        description: 'Test description 2.',
+        link: '/result.html?id=5678',
+        title: 'Test Title 2',
+        url: 'bing.com',
+        detailExtractions: [{
+          key: 'phone',
+          data: [{
+            text: '987-654-3210'
+          }]
+        }, {
+          key: 'email',
+          data: [{
+            text: 'xyz@abc.com'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'date',
+          data: [{
+            text: 'Dec 31 2018'
+          }]
+        }, {
+          key: 'location',
+          data: [{
+            text: 'Canada'
+          }]
+        }],
+        images: [{
+          downloadSource: 'downloadImage2',
+          source: 'imageUrl2'
+        }]
+      }], [{
+        key: 'date',
+        result: 'header',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        result: 'header',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        result: 'detail',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        result: 'detail',
+        title: 'Emails'
+      }]);
+
+      expect(output.length).to.equal(3);
+      expect(output[0]).to.deep.equal(['TestResult', 'DIG URL', 'Title', 'Dates', 'Locations', 'Phones', 'Emails', 'Description', 'Images']);
+      expect(output[1].length).to.equal(9);
+      expect(output[1][0]).to.equal('google.com');
+      expect(output[1][1]).to.equal(window.location.hostname + ':' + window.location.port + '/result.html?id=1234');
+      expect(output[1][2]).to.equal('Test Title 1');
+      expect(output[1][3]).to.equal('Jan 1 2018');
+      expect(output[1][4]).to.equal('United States');
+      expect(output[1][5]).to.equal('123-456-7890');
+      expect(output[1][6]).to.equal('abc@xyz.com');
+      expect(output[1][7]).to.equal('Test description 1.');
+      expect(output[1][8]).to.equal('imageUrl1');
+      expect(output[2].length).to.equal(9);
+      expect(output[2][0]).to.equal('bing.com');
+      expect(output[2][1]).to.equal(window.location.hostname + ':' + window.location.port + '/result.html?id=5678');
+      expect(output[2][2]).to.equal('Test Title 2');
+      expect(output[2][3]).to.equal('Dec 31 2018');
+      expect(output[2][4]).to.equal('Canada');
+      expect(output[2][5]).to.equal('987-654-3210');
+      expect(output[2][6]).to.equal('xyz@abc.com');
+      expect(output[2][7]).to.equal('Test description 2.');
+      expect(output[2][8]).to.equal('imageUrl2');
+    });
+
+    test('createExportDataForCsv given multiple extractions of same type does return expected array', function() {
+      var output = transformFunctions.transforms.export.createExportDataForCsv([{
+        description: 'Test description.',
+        link: '/result.html?id=1234',
+        title: 'Test Title',
+        url: 'google.com',
+        detailExtractions: [{
+          key: 'phone',
+          data: [{
+            text: '123-456-7890'
+          }, {
+            text: '987-654-3210'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'location',
+          data: [{
+            text: 'United States'
+          }, {
+            text: 'Canada'
+          }]
+        }],
+        images: [{
+          downloadSource: 'downloadImage1',
+          source: 'imageUrl1'
+        }, {
+          downloadSource: 'downloadImage2',
+          source: 'imageUrl2'
+        }]
+      }], [{
+        key: 'location',
+        result: 'header',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        result: 'detail',
+        title: 'Phones'
+      }]);
+
+      expect(output.length).to.equal(2);
+      expect(output[0]).to.deep.equal(['TestResult', 'DIG URL', 'Title', 'Locations', 'Phones', 'Description', 'Images']);
+      expect(output[1].length).to.equal(7);
+      expect(output[1][0]).to.equal('google.com');
+      expect(output[1][1]).to.equal(window.location.hostname + ':' + window.location.port + '/result.html?id=1234');
+      expect(output[1][2]).to.equal('Test Title');
+      expect(output[1][3]).to.equal('United States, Canada');
+      expect(output[1][4]).to.equal('123-456-7890, 987-654-3210');
+      expect(output[1][5]).to.equal('Test description.');
+      expect(output[1][6]).to.equal('imageUrl1, imageUrl2');
+    });
+
+    test('createExportDataForCsv does remove newlines and tabs from descriptions', function() {
+      var output = transformFunctions.transforms.export.createExportDataForCsv([{
+        description: 'A quick\tbrown fox\njumps over\tthe lazy dog.\n',
+        link: '/result.html?id=1234',
+        title: 'Test Title',
+        url: 'google.com',
+        detailExtractions: [],
+        headerExtractions: []
+      }], []);
+
+      expect(output.length).to.equal(2);
+      expect(output[0]).to.deep.equal(['TestResult', 'DIG URL', 'Title', 'Description', 'Images']);
+      expect(output[1].length).to.equal(5);
+      expect(output[1][0]).to.equal('google.com');
+      expect(output[1][1]).to.equal(window.location.hostname + ':' + window.location.port + '/result.html?id=1234');
+      expect(output[1][2]).to.equal('Test Title');
+      expect(output[1][3]).to.equal('A quick brown fox jumps over the lazy dog.');
+      expect(output[1][4]).to.equal('');
+    });
+
+    test('createExportDataForCsv does maintain search fields order', function() {
+      var output = transformFunctions.transforms.export.createExportDataForCsv([{
+        description: 'Test description.',
+        link: '/result.html?id=1234',
+        title: 'Test Title',
+        url: 'google.com',
+        detailExtractions: [{
+          key: 'email',
+          data: [{
+            text: 'abc@xyz.com'
+          }]
+        }, {
+          key: 'phone',
+          data: [{
+            text: '123-456-7890'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'location',
+          data: [{
+            text: 'United States'
+          }]
+        }, {
+          key: 'date',
+          data: [{
+            text: 'Jan 1 2018'
+          }]
+        }]
+      }], [{
+        key: 'date',
+        result: 'header',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        result: 'header',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        result: 'detail',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        result: 'detail',
+        title: 'Emails'
+      }]);
+
+      expect(output.length).to.equal(2);
+      expect(output[0]).to.deep.equal(['TestResult', 'DIG URL', 'Title', 'Dates', 'Locations', 'Phones', 'Emails', 'Description', 'Images']);
+      expect(output[1].length).to.equal(9);
+      expect(output[1][0]).to.equal('google.com');
+      expect(output[1][1]).to.equal(window.location.hostname + ':' + window.location.port + '/result.html?id=1234');
+      expect(output[1][2]).to.equal('Test Title');
+      expect(output[1][3]).to.equal('Jan 1 2018');
+      expect(output[1][4]).to.equal('United States');
+      expect(output[1][5]).to.equal('123-456-7890');
+      expect(output[1][6]).to.equal('abc@xyz.com');
+      expect(output[1][7]).to.equal('Test description.');
+      expect(output[1][8]).to.equal('');
+    });
+
+    test('createExportDataForPdf given no data or search fields does return expected array', function() {
+      var output = transformFunctions.transforms.export.createExportDataForPdf([], []);
+      expect(output).to.deep.equal([]);
+    });
+
+    test('createExportDataForPdf given data and search fields does return expected array', function() {
+      var output = transformFunctions.transforms.export.createExportDataForPdf([{
+        description: 'Test description.',
+        link: '/result.html?id=1234',
+        title: 'Test Title',
+        url: 'google.com',
+        detailExtractions: [{
+          key: 'phone',
+          data: [{
+            text: '123-456-7890'
+          }]
+        }, {
+          key: 'email',
+          data: [{
+            text: 'abc@xyz.com'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'date',
+          data: [{
+            text: 'Jan 1 2018'
+          }]
+        }, {
+          key: 'location',
+          data: [{
+            text: 'United States'
+          }]
+        }],
+        images: [{
+          downloadSource: 'downloadImage',
+          source: 'imageUrl'
+        }]
+      }], [{
+        key: 'date',
+        result: 'header',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        result: 'header',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        result: 'detail',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        result: 'detail',
+        title: 'Emails'
+      }]);
+
+      expect(output.length).to.equal(1);
+      expect(output[0].images.length).to.equal(1);
+      expect(output[0].images).deep.equal([{
+        id: 'image1',
+        source: 'downloadImage',
+        text: 'imageUrl'
+      }]);
+      expect(output[0].paragraphs.length).to.equal(8);
+      expect(output[0].paragraphs[0]).to.deep.equal({
+        big: true,
+        label: 'Test Title',
+        value: ''
+      });
+      expect(output[0].paragraphs[1]).to.deep.equal({
+        label: 'TestResult:  ',
+        value: 'google.com'
+      });
+      expect(output[0].paragraphs[2]).to.deep.equal({
+        label: 'DIG URL:  ',
+        value: window.location.hostname + ':' + window.location.port + '/result.html?id=1234'
+      });
+      expect(output[0].paragraphs[3]).to.deep.equal({
+        label: 'Dates: ',
+        value: 'Jan 1 2018'
+      });
+      expect(output[0].paragraphs[4]).to.deep.equal({
+        label: 'Locations: ',
+        value: 'United States'
+      });
+      expect(output[0].paragraphs[5]).to.deep.equal({
+        label: 'Phones: ',
+        value: '123-456-7890'
+      });
+      expect(output[0].paragraphs[6]).to.deep.equal({
+        label: 'Emails: ',
+        value: 'abc@xyz.com'
+      });
+      expect(output[0].paragraphs[7]).to.deep.equal({
+        label: 'Description:  ',
+        value: 'Test description.'
+      });
+    });
+
+    test('createExportDataForPdf given lots of data and search fields does return expected array', function() {
+      var output = transformFunctions.transforms.export.createExportDataForPdf([{
+        description: 'Test description 1.',
+        link: '/result.html?id=1234',
+        title: 'Test Title 1',
+        url: 'google.com',
+        detailExtractions: [{
+          key: 'phone',
+          data: [{
+            text: '123-456-7890'
+          }]
+        }, {
+          key: 'email',
+          data: [{
+            text: 'abc@xyz.com'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'date',
+          data: [{
+            text: 'Jan 1 2018'
+          }]
+        }, {
+          key: 'location',
+          data: [{
+            text: 'United States'
+          }]
+        }],
+        images: [{
+          downloadSource: 'downloadImage1',
+          source: 'imageUrl1'
+        }]
+      }, {
+        description: 'Test description 2.',
+        link: '/result.html?id=5678',
+        title: 'Test Title 2',
+        url: 'bing.com',
+        detailExtractions: [{
+          key: 'phone',
+          data: [{
+            text: '987-654-3210'
+          }]
+        }, {
+          key: 'email',
+          data: [{
+            text: 'xyz@abc.com'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'date',
+          data: [{
+            text: 'Dec 31 2018'
+          }]
+        }, {
+          key: 'location',
+          data: [{
+            text: 'Canada'
+          }]
+        }],
+        images: [{
+          downloadSource: 'downloadImage2',
+          source: 'imageUrl2'
+        }]
+      }], [{
+        key: 'date',
+        result: 'header',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        result: 'header',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        result: 'detail',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        result: 'detail',
+        title: 'Emails'
+      }]);
+
+      expect(output.length).to.equal(2);
+      expect(output[0].images.length).to.equal(1);
+      expect(output[0].images).deep.equal([{
+        id: 'image1',
+        source: 'downloadImage1',
+        text: 'imageUrl1'
+      }]);
+      expect(output[0].paragraphs.length).to.equal(8);
+      expect(output[0].paragraphs[0]).to.deep.equal({
+        big: true,
+        label: 'Test Title 1',
+        value: ''
+      });
+      expect(output[0].paragraphs[1]).to.deep.equal({
+        label: 'TestResult:  ',
+        value: 'google.com'
+      });
+      expect(output[0].paragraphs[2]).to.deep.equal({
+        label: 'DIG URL:  ',
+        value: window.location.hostname + ':' + window.location.port + '/result.html?id=1234'
+      });
+      expect(output[0].paragraphs[3]).to.deep.equal({
+        label: 'Dates: ',
+        value: 'Jan 1 2018'
+      });
+      expect(output[0].paragraphs[4]).to.deep.equal({
+        label: 'Locations: ',
+        value: 'United States'
+      });
+      expect(output[0].paragraphs[5]).to.deep.equal({
+        label: 'Phones: ',
+        value: '123-456-7890'
+      });
+      expect(output[0].paragraphs[6]).to.deep.equal({
+        label: 'Emails: ',
+        value: 'abc@xyz.com'
+      });
+      expect(output[0].paragraphs[7]).to.deep.equal({
+        label: 'Description:  ',
+        value: 'Test description 1.'
+      });
+      expect(output[1].images.length).to.equal(1);
+      expect(output[1].images).deep.equal([{
+        id: 'image2',
+        source: 'downloadImage2',
+        text: 'imageUrl2'
+      }]);
+      expect(output[1].paragraphs.length).to.equal(8);
+      expect(output[1].paragraphs[0]).to.deep.equal({
+        big: true,
+        label: 'Test Title 2',
+        value: ''
+      });
+      expect(output[1].paragraphs[1]).to.deep.equal({
+        label: 'TestResult:  ',
+        value: 'bing.com'
+      });
+      expect(output[1].paragraphs[2]).to.deep.equal({
+        label: 'DIG URL:  ',
+        value: window.location.hostname + ':' + window.location.port + '/result.html?id=5678'
+      });
+      expect(output[1].paragraphs[3]).to.deep.equal({
+        label: 'Dates: ',
+        value: 'Dec 31 2018'
+      });
+      expect(output[1].paragraphs[4]).to.deep.equal({
+        label: 'Locations: ',
+        value: 'Canada'
+      });
+      expect(output[1].paragraphs[5]).to.deep.equal({
+        label: 'Phones: ',
+        value: '987-654-3210'
+      });
+      expect(output[1].paragraphs[6]).to.deep.equal({
+        label: 'Emails: ',
+        value: 'xyz@abc.com'
+      });
+      expect(output[1].paragraphs[7]).to.deep.equal({
+        label: 'Description:  ',
+        value: 'Test description 2.'
+      });
+    });
+
+    test('createExportDataForPdf given multiple extractions of same type does return expected array', function() {
+      var output = transformFunctions.transforms.export.createExportDataForPdf([{
+        description: 'Test description.',
+        link: '/result.html?id=1234',
+        title: 'Test Title',
+        url: 'google.com',
+        detailExtractions: [{
+          key: 'phone',
+          data: [{
+            text: '123-456-7890'
+          }, {
+            text: '987-654-3210'
+          }]
+        }],
+        headerExtractions: [{
+          key: 'location',
+          data: [{
+            text: 'United States'
+          }, {
+            text: 'Canada'
+          }]
+        }],
+        images: [{
+          downloadSource: 'downloadImage1',
+          source: 'imageUrl1'
+        }, {
+          downloadSource: 'downloadImage2',
+          source: 'imageUrl2'
+        }]
+      }], [{
+        key: 'location',
+        result: 'header',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        result: 'detail',
+        title: 'Phones'
+      }]);
+
+      expect(output.length).to.equal(1);
+      expect(output[0].images.length).to.equal(2);
+      expect(output[0].images).deep.equal([{
+        id: 'image1',
+        source: 'downloadImage1',
+        text: 'imageUrl1'
+      }, {
+        id: 'image2',
+        source: 'downloadImage2',
+        text: 'imageUrl2'
+      }]);
+      expect(output[0].paragraphs.length).to.equal(6);
+      expect(output[0].paragraphs[0]).to.deep.equal({
+        big: true,
+        label: 'Test Title',
+        value: ''
+      });
+      expect(output[0].paragraphs[1]).to.deep.equal({
+        label: 'TestResult:  ',
+        value: 'google.com'
+      });
+      expect(output[0].paragraphs[2]).to.deep.equal({
+        label: 'DIG URL:  ',
+        value: window.location.hostname + ':' + window.location.port + '/result.html?id=1234'
+      });
+      expect(output[0].paragraphs[3]).to.deep.equal({
+        label: 'Locations: ',
+        value: 'United States, Canada'
+      });
+      expect(output[0].paragraphs[4]).to.deep.equal({
+        label: 'Phones: ',
+        value: '123-456-7890, 987-654-3210'
+      });
+      expect(output[0].paragraphs[5]).to.deep.equal({
+        label: 'Description:  ',
+        value: 'Test description.'
+      });
+    });
+
+    test('createExportDataForPdf does remove tabs but not newlines from descriptions', function() {
+      var output = transformFunctions.transforms.export.createExportDataForPdf([{
+        description: 'A quick\tbrown fox\njumps over\tthe lazy dog.\n',
+        link: '/result.html?id=1234',
+        title: 'Test Title',
+        url: 'google.com',
+        detailExtractions: [],
+        headerExtractions: []
+      }], []);
+
+      expect(output.length).to.equal(1);
+      expect(output[0].images).deep.equal([]);
+      expect(output[0].paragraphs.length).to.equal(4);
+      expect(output[0].paragraphs[0]).to.deep.equal({
+        big: true,
+        label: 'Test Title',
+        value: ''
+      });
+      expect(output[0].paragraphs[1]).to.deep.equal({
+        label: 'TestResult:  ',
+        value: 'google.com'
+      });
+      expect(output[0].paragraphs[2]).to.deep.equal({
+        label: 'DIG URL:  ',
+        value: window.location.hostname + ':' + window.location.port + '/result.html?id=1234'
+      });
+      expect(output[0].paragraphs[3]).to.deep.equal({
+        label: 'Description:  ',
+        value: 'A quick brown fox\njumps over the lazy dog.'
+      });
+    });
+
+    test('createExportDataForPdf does increase ID of images across multiple results', function() {
+      var output = transformFunctions.transforms.export.createExportDataForPdf([{
+        description: 'Test description 1.',
+        link: '/result.html?id=1234',
+        title: 'Test Title 1',
+        url: 'google.com',
+        detailExtractions: [],
+        headerExtractions: [],
+        images: [{
+          downloadSource: 'downloadImage1',
+          source: 'imageUrl1'
+        }, {
+          downloadSource: 'downloadImage2',
+          source: 'imageUrl2'
+        }]
+      }, {
+        description: 'Test description 2.',
+        link: '/result.html?id=5678',
+        title: 'Test Title 2',
+        url: 'bing.com',
+        detailExtractions: [],
+        headerExtractions: [],
+        images: [{
+          downloadSource: 'downloadImage1',
+          source: 'imageUrl1'
+        }, {
+          downloadSource: 'downloadImage3',
+          source: 'imageUrl3'
+        }]
+      }], [{
+        key: 'date',
+        result: 'header',
+        title: 'Dates'
+      }, {
+        key: 'location',
+        result: 'header',
+        title: 'Locations'
+      }, {
+        key: 'phone',
+        result: 'detail',
+        title: 'Phones'
+      }, {
+        key: 'email',
+        result: 'detail',
+        title: 'Emails'
+      }]);
+
+      expect(output.length).to.equal(2);
+      expect(output[0].images.length).to.equal(2);
+      expect(output[0].images).deep.equal([{
+        id: 'image1',
+        source: 'downloadImage1',
+        text: 'imageUrl1'
+      }, {
+        id: 'image2',
+        source: 'downloadImage2',
+        text: 'imageUrl2'
+      }]);
+      expect(output[1].images.length).to.equal(2);
+      expect(output[1].images).deep.equal([{
+        id: 'image3',
+        source: 'downloadImage1',
+        text: 'imageUrl1'
+      }, {
+        id: 'image4',
+        source: 'downloadImage3',
+        text: 'imageUrl3'
+      }]);
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 <!--
-Copyright 2017 Next Century Corporation
+Copyright 2018 Next Century Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,117 +14,120 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+
 <dom-module id="entity-page-styles">
   <template>
+    <style include="iron-flex iron-flex-reverse iron-flex-alignment iron-flex-factors iron-positioning"></style>
+
     <style>
-
-      .entity {
-        height: 100%;
-        @apply(--layout-horizontal);
-      }
-
-      .entity-page {
-        @apply(--layout-vertical);
-      }
-
-      /* Entity page header */
-
-      .paper-header {
-        padding: 0 20px;
+      .page-head {
+        @apply --layout-horizontal;
+        @apply --layout-center;
+        @apply --layout-flex;
+        background-color: var(--navbar-color);
+        color: #fff;
+        min-height: 30px;
+        padding: 10px;
         transition: height 0.2s;
+        /* Add shadow. */
+        position: relative;
+        z-index: 2;
+        @apply --shadow-elevation-4dp;
       }
 
-      .paper-font-caption {
-        color: var(--disabled-text-color);
-        text-transform: uppercase;
-      }
-
-      .paper-header .paper-font-headline {
-        font-weight: 500;
+      .page-head .page-data {
+        @apply --layout-horizontal;
+        @apply --layout-center;
+        @apply --layout-flex;
         transition: all 0.2s;
-        word-break: break-word;
       }
 
-      .paper-header .paper-font-subhead {
-        transition: font-size 0.2s;
+      .page-head .page-icon,
+      .page-head .page-link,
+      .page-head .page-name,
+      .page-head #logoLink {
+        margin-right: 10px;
       }
 
-      .paper-header .page-name {
-        padding: 15px;
-        transition: padding 0.2s;
+      .page-head .page-link {
+        /* Same height as page-head */
+        height: 30px;
       }
 
-      .paper-header .paper-font-subhead {
-        color: var(--secondary-text-color);
-      }
-
-      .iron-icon-big iron-icon {
-        /* Same height as paper-font-title */
-        --iron-icon-height: 28px;
-        --iron-icon-width: 28px;
-      }
-
-      .iron-icon-huge iron-icon {
-        /* Same height as paper-font-headline */
-        --iron-icon-height: 32px;
-        --iron-icon-width: 32px;
-        min-width: 32px;
-      }
-
-      .image-section {
-        --section-container-padding: 0;
-      }
-
-      .image-section iron-image {
-        --iron-image-height: auto;
+      .page-head .page-link iron-image {
+        /* Same height as page-head */
+        --iron-image-height: 30px;
         --iron-image-width: auto;
-        padding: 0;
-        margin: 0;
+        min-width: 30px;
       }
 
-      .image-section iron-image ::content img {
-        max-height: 400px;
-      }
-
-      /* Other */
-
-      time {
-        margin-left: 5px;
-      }
-
-      result-list {
-        icon-label {
-         --extraction-text: {
-            max-width: 115px;
-            white-space: nowrap;
-          }
-        }
-      }
-
-      image-query-and-display {
-        --image-query-and-display-max-height: 800px;
-      }
-
-      .info-link {
-        color: var(--secondary-text-color);
-        cursor: pointer;
+      .page-head .page-name {
+        display: -webkit-box;
+        font-size: 20px;
+        font-weight: 500;
         line-height: 30px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: normal;
+        word-break: break-all;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
       }
 
-      .info-link:hover {
-        color: var(--primary-text-color);
+      .page-body {
+        @apply --layout-horizontal;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: 55px;
       }
 
-      .info-link iron-icon {
-        --iron-icon-height: 20px;
-        --iron-icon-width: 20px;
-        padding-bottom: 4px;
+      .page-body .page-column {
+        @apply --layout-vertical;
+        @apply --layout-flex;
+        display: block;
+        padding-left: 5px;
       }
 
-      .info-link span {
-        font-size: 14px;
-        font-style: italic;
-        text-decoration: underline;
+      .page-body .page-single-column {
+        overflow-y: auto;
+      }
+
+      .page-body .details-section,
+      .page-body .results-section {
+        --section-content-padding: 0;
+      }
+
+      .page-body .results-error {
+        margin: 0 10px;
+      }
+
+      .page-body result-list {
+        --result-list-max-height: none;
+      }
+
+      .small-blur {
+        -webkit-filter: blur(5px);
+        filter: blur(5px);
+      }
+
+      .large-blur {
+        -webkit-filter: blur(25px);
+        filter: blur(25px);
+      }
+
+      .no-blur {
+        -webkit-filter: none;
+        filter: none;
+      }
+
+      leaflet-wrapper {
+        margin-bottom: 10px;
+        min-height: 300px;
+        min-width: 200px;
+        position: relative;
       }
 
       /* Material Design Adaptive Breakpoints */
@@ -154,63 +157,68 @@ limitations under the License.
       @media all and (min-width: 601px) and (max-width: 840px) and (orientation : portrait) { }
       /* desktop-x-small-landscape */
       @media all and (min-width: 0) and (max-width: 480px) and (orientation: landscape) {
-        .content {
-          @apply(--layout-vertical);
+        .page-body {
+          @apply --layout-vertical;
+          overflow-y: auto;
         }
-        .paper-header .page-name {
-          @apply(--layout-flex);
+        .page-body .page-column {
+          overflow-y: visible;
         }
       }
       /* desktop-x-small */
       @media all and (min-width: 0) and (max-width: 480px) and (max-aspect-ratio: 4/3) {
-        .content {
-          @apply(--layout-vertical);
+        .page-body {
+          @apply --layout-vertical;
+          overflow-y: auto;
         }
-        .paper-header .page-name {
-          @apply(--layout-flex);
+        .page-body .page-column {
+          overflow-y: visible;
         }
       }
       /* desktop-small-landscape */
       @media all and (min-width: 481px) and (max-width: 840px) and (orientation: landscape) {
-        .content {
-          @apply(--layout-vertical);
+        .page-body {
+          @apply --layout-vertical;
+          overflow-y: auto;
         }
-        .paper-header .page-name {
-          @apply(--layout-flex);
+        .page-body .page-column {
+          overflow-y: visible;
         }
       }
       /* desktop-small */
       @media all and (min-width: 481px) and (max-width: 840px) and (max-aspect-ratio: 4/3) {
-        .content {
-          @apply(--layout-vertical);
+        .page-body {
+          @apply --layout-vertical;
+          overflow-y: auto;
         }
-        .paper-header .page-name {
-          @apply(--layout-flex);
+        .page-body .page-column {
+          overflow-y: visible;
         }
       }
       /* desktop-medium-landscape */
-      @media all and (min-width: 841px) and (max-width: 1280px) and (orientation: landscape) {
-        .content {
-          @apply(--layout-vertical);
+      @media all and (min-width: 841px) and (max-width: 1080px) and (orientation: landscape) {
+        .page-body {
+          @apply --layout-vertical;
+          overflow-y: auto;
         }
-        .paper-header .page-name {
-          @apply(--layout-flex);
+        .page-body .page-column {
+          overflow-y: visible;
         }
       }
       /* desktop-medium */
-      @media all and (min-width: 841px) and (max-width: 1280px) and (max-aspect-ratio: 4/3) {
-        .content {
-          @apply(--layout-vertical);
+      @media all and (min-width: 841px) and (max-width: 1080px) and (max-aspect-ratio: 4/3) {
+        .page-body {
+          @apply --layout-vertical;
+          overflow-y: auto;
         }
-        .paper-header .page-name {
-          @apply(--layout-flex);
+        .page-body .page-column {
+          overflow-y: visible;
         }
       }
       /* desktop-large */
       @media all and (min-width: 1281px) and (max-width: 1600px) { }
       /* desktop-xlarge */
       @media all and (min-width: 1601px) and (max-width: 1920px) { }
-
     </style>
   </template>
 </dom-module>

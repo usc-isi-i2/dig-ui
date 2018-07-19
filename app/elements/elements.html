@@ -1,5 +1,5 @@
 <!--
-Copyright 2017 Next Century Corporation
+Copyright 2018 Next Century Corporation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,70 +14,112 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- polymer style -->
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<custom-style>
+  <style is="custom-style" include="iron-flex iron-flex-reverse iron-flex-alignment iron-flex-factors iron-positioning"></style>
+</custom-style>
+
 <!-- polymer iron elements -->
 <link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
 <link rel="import" href="../bower_components/iron-dropdown/iron-dropdown.html">
-<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
 <link rel="import" href="../bower_components/iron-icon/iron-icon.html">
 <link rel="import" href="../bower_components/iron-icons/av-icons.html">
 <link rel="import" href="../bower_components/iron-icons/communication-icons.html">
+<link rel="import" href="../bower_components/iron-icons/device-icons.html">
 <link rel="import" href="../bower_components/iron-icons/editor-icons.html">
+<link rel="import" href="../bower_components/iron-icons/hardware-icons.html">
 <link rel="import" href="../bower_components/iron-icons/image-icons.html">
 <link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="../bower_components/iron-icons/maps-icons.html">
+<link rel="import" href="../bower_components/iron-icons/notification-icons.html">
+<link rel="import" href="../bower_components/iron-icons/places-icons.html">
 <link rel="import" href="../bower_components/iron-icons/social-icons.html">
 <link rel="import" href="../bower_components/iron-iconset-svg/iron-iconset-svg.html">
-<link rel="import" href="../bower_components/iron-pages/iron-pages.html">
-<link rel="import" href="../bower_components/iron-scroll-threshold/iron-scroll-threshold.html">
+
+<!--
+<link rel="import" href="../bower_components/iron-icons/alert-icons.html">
+<link rel="import" href="../bower_components/iron-icons/content-icons.html">
+<link rel="import" href="../bower_components/iron-icons/file-icons.html">
+<link rel="import" href="../bower_components/iron-icons/navigation-icons.html">
+<link rel="import" href="../bower_components/iron-icons/toggle-icons.html">
+-->
 
 <!-- polymer paper elements -->
 <link rel="import" href="../bower_components/paper-button/paper-button.html">
 <link rel="import" href="../bower_components/paper-drawer-panel/paper-drawer-panel.html">
 <link rel="import" href="../bower_components/paper-header-panel/paper-header-panel.html">
-<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../bower_components/paper-input/paper-input.html">
 <link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
 <link rel="import" href="../bower_components/paper-material/paper-material.html">
+<link rel="import" href="../bower_components/paper-spinner/paper-spinner.html">
 <link rel="import" href="../bower_components/paper-styles/color.html">
-<link rel="import" href="../bower_components/paper-styles/paper-styles-classes.html">
+<link rel="import" href="../bower_components/paper-styles/shadow.html">
 <link rel="import" href="../bower_components/paper-toolbar/paper-toolbar.html">
 
 <!-- dig elements -->
 <link rel="import" href="../bower_components/aggregation-query-and-display/aggregation-query-and-display.html">
-<link rel="import" href="../bower_components/array-behavior/array-behavior.html">
 <link rel="import" href="../bower_components/build-and-run-query/build-and-run-query.html">
 <link rel="import" href="../bower_components/button-action/button-action.html">
-<link rel="import" href="../bower_components/date-picker-display/date-picker-display.html">
-<link rel="import" href="../bower_components/date-range-facet/date-range-facet.html">
+<link rel="import" href="../bower_components/bulk-search/bulk-search.html">
+<link rel="import" href="../bower_components/detail-view/detail-view.html">
+<link rel="import" href="../bower_components/dig-logger/dig-logger.html">
+<link rel="import" href="../bower_components/dropdown-menu/dropdown-menu.html">
 <link rel="import" href="../bower_components/elastic-client/elastic-client.html">
 <link rel="import" href="../bower_components/elastic-client-query-builder/elastic-client-query-builder.html">
 <link rel="import" href="../bower_components/elastic-error/elastic-error.html">
-<link rel="import" href="../bower_components/facet-list/facet-list.html">
+<link rel="import" href="../bower_components/export-button/export-button.html">
+<link rel="import" href="../bower_components/export-button/export-dialog.html">
+<link rel="import" href="../bower_components/extraction-grid/extraction-grid.html">
+<link rel="import" href="../bower_components/facet-panel/facet-panel.html">
 <link rel="import" href="../bower_components/filters-builder/filters-builder.html">
-<link rel="import" href="../bower_components/icon-label/icon-label.html">
 <link rel="import" href="../bower_components/image-query-and-display/image-query-and-display.html">
+<link rel="import" href="../bower_components/icon-button/icon-button.html">
 <link rel="import" href="../bower_components/json-combine/json-combine.html">
+<link rel="import" href="../bower_components/leaflet-wrapper/leaflet-wrapper.html">
+<link rel="import" href="../bower_components/log-creator/log-creator.html">
+<link rel="import" href="../bower_components/modal-icon/modal-icon.html">
+<link rel="import" href="../bower_components/nested-list/nested-list.html">
+<link rel="import" href="../bower_components/profile-manager/profile-manager.html">
+<link rel="import" href="../bower_components/query-builder/query-builder.html">
 <link rel="import" href="../bower_components/query-transformer/query-transformer.html">
 <link rel="import" href="../bower_components/result-list/result-list.html">
+<link rel="import" href="../bower_components/search-fields-dialog/search-fields-button.html">
+<link rel="import" href="../bower_components/search-fields-dialog/search-fields-dialog.html">
+<link rel="import" href="../bower_components/save-case-dialog/save-case-dialog.html">
 <link rel="import" href="../bower_components/selected-facets-display/selected-facets-display.html">
+<link rel="import" href="../bower_components/single-result/single-result.html">
+<link rel="import" href="../bower_components/sparkline-list/sparkline-list.html">
+<link rel="import" href="../bower_components/state-manager/state-manager.html">
 <link rel="import" href="../bower_components/styled-dialog/styled-dialog.html">
+<link rel="import" href="../bower_components/tag-entity-buttons/tag-entity-buttons.html">
+<link rel="import" href="../bower_components/tag-extraction-buttons/tag-extraction-buttons.html">
+<link rel="import" href="../bower_components/tag-manager/tag-manager.html">
+<link rel="import" href="../bower_components/terms-transformer/terms-transformer.html">
+<link rel="import" href="../bower_components/user-settings-dialog/user-settings-button.html">
+<link rel="import" href="../bower_components/user-settings-dialog/user-settings-dialog.html">
 <link rel="import" href="../bower_components/zoomable-bar-chart/zoomable-bar-chart.html">
 
 <!-- other elements -->
 <link rel="import" href="../bower_components/fontawesome-iconset/fa-all.html">
 <link rel="import" href="../bower_components/moment-element/moment-with-locales-import.html">
 
-<!-- dig-ui style -->
-<link rel="import" href="../styles/app-theme.html">
+<!-- dig-ui page behavior -->
+<link rel="import" href="behaviors.html">
+
+<!-- dig-ui page elements -->
+<link rel="import" href="cached-page/cached-page.html">
+<link rel="import" href="entity-page/entity-page.html">
+<link rel="import" href="result-page/result-page.html">
+<link rel="import" href="search-page/search-page.html">
 
 <!-- dig-ui elements -->
-<link rel="import" href="detail-subsection/detail-subsection.html">
-<link rel="import" href="info-facets/info-facets.html">
-<link rel="import" href="info-search/info-search.html">
-<link rel="import" href="search-fields-dialog/search-fields-dialog.html">
-<link rel="import" href="section-and-map/section-and-map.html">
-<link rel="import" href="section-and-title/section-and-title.html">
-<link rel="import" href="section-container/section-container.html">
-<link rel="import" href="section-title/section-title.html">
+<link rel="import" href="copy-button/copy-button.html">
+<link rel="import" href="database-details/database-details.html">
+<link rel="import" href="dual-column/dual-column.html">
+<link rel="import" href="section-wrapper/section-wrapper.html">
 <link rel="import" href="transform-functions/transform-functions.html">
-<link rel="import" href="similar-image-search/similar-image-search.html">
+
+<!-- search page elements -->
+<link rel="import" href="../bower_components/dig-ui-search-box/editable-button.html">
+<link rel="import" href="../bower_components/dig-ui-search-box/search-box.html">
+<link rel="import" href="../bower_components/dig-ui-search-box/search-strategy.html">

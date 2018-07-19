@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Next Century Corporation
+ * Copyright 2018 Next Century Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,84 +18,105 @@
 /* jshint camelcase:false */
 
 var entityTransforms = (function(_, commonTransforms, esConfig) {
-  function getSingleStringFromResult(result, path) {
-    var parentPath = path.substring(0, path.lastIndexOf('.'));
-    var property = path.substring(path.lastIndexOf('.') + 1, path.length);
-    var data = _.get(result, parentPath, []);
-
-    if(data && _.isArray(data)) {
-      return data.length ? data.map(function(item) {
-        return item[property];
-      }).join('\n') : undefined;
+  function getAggregationBuckets(data, name) {
+    if(data && data.aggregations && data.aggregations[name]) {
+      if(data.aggregations[name][name]) {
+        return data.aggregations[name][name].buckets || [];
+      }
+      return data.aggregations[name].buckets || [];
     }
-
-    return data ? data[property] : undefined;
+    return [];
   }
 
   function getExtraction(item, config, index, confidence) {
+    var key = _.isObject(item) ? item.key : item;
+    var value = _.isObject(item) ? item.value : item;
     /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
     var count = item.doc_count;
     /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
     var extraction = {
       confidence: confidence,
       count: count,
-      id: commonTransforms.getExtractionDataId(item.key, item.value, config.type),
+      id: commonTransforms.getExtractionDataId(key, value, config.type),
       icon: config.icon,
-      link: commonTransforms.getLink(item.key, config.link, config.key),
-      styleClass: commonTransforms.getStyleClass(config.color),
-      text: commonTransforms.getExtractionDataText(item.key, item.value, config.type, (index || 0)),
-      type: config.key
+      link: commonTransforms.getLink(key, config.link, config.type, config.key),
+      provenances: [],
+      styleClass: config.styleClass,
+      text: commonTransforms.getExtractionDataText(key, value, config.type, (index || 0)),
+      type: config.key,
+      width: config.width
     };
+
+    if(item.provenance && item.provenance.length) {
+      extraction.provenances = item.provenance.map(function(provenance) {
+        return {
+          method: provenance.method + (provenance.source && provenance.source.segment ? ' from ' + provenance.source.segment : ''),
+          text: provenance.source && provenance.source.context ? provenance.source.context.text : 'Not Available'
+        };
+      });
+      // Set the confidence to 100 if it is undefined.
+      extraction.confidence = _.isUndefined(extraction.confidence) ? 100 : extraction.confidence;
+    }
+
     if(config.type !== 'url') {
+      /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+      var userClassification = '' + item.human_annotation;
+      /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
       extraction.classifications = {
-        database: '',
         type: config.key,
-        user: ''
+        user: (userClassification === '1' ? 'positive' : (userClassification === '0' ? 'negative' : undefined))
       };
     }
+
     if(config.type === 'location') {
-      var locationData = commonTransforms.getLocationDataFromKey(item.key);
+      var locationData = commonTransforms.getLocationDataFromKey(key);
       extraction.latitude = locationData.latitude;
       extraction.longitude = locationData.longitude;
       extraction.text = locationData.text;
       extraction.textAndCountry = locationData.text + (locationData.country ? (', ' + locationData.country) : '');
     }
+
     if(config.type === 'image') {
-      extraction.source = item.key;
+      extraction.downloadSource = (esConfig ? esConfig.downloadImageUrl : '/') + (esConfig.downloadImageUrl === '/' ? '' : '/') + encodeURIComponent(key);
+      extraction.source = commonTransforms.getImageUrl(key, esConfig);
     }
-    extraction.textAndCount = extraction.text + (extraction.count ? (' (' + extraction.count + ')') : '');
+
+    var countLabel = extraction.count ? extraction.count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+    extraction.textAndCount = extraction.text + (countLabel ? (' (' + countLabel + ')') : '');
     return extraction;
   }
 
-  function getExtractionsFromList(extractionList, config) {
+  function getExtractionsFromList(extractionList, config, hideIcons) {
     var extractionData = extractionList.map(function(item, index) {
       var confidence = _.isUndefined(item.confidence) ? undefined : (Math.round(Math.min(item.confidence, 1) * 10000.0) / 100.0);
-      return getExtraction(item, config, index, confidence);
+      var extraction = getExtraction(item, config, index, confidence);
+      if(hideIcons) {
+        delete extraction.icon;
+      }
+      return extraction;
     });
     return extractionData.filter(commonTransforms.getExtractionFilterFunction(config.type));
   }
 
   function getExtractionsFromResult(result, path, config) {
     var data = _.get(result, path, []);
-    return getExtractionsFromList(data, config);
+    return getExtractionsFromList((_.isArray(data) ? data : [data]), config);
   }
 
-  function getHighlightedText(result, paths) {
-    var path = _.find(paths, function(path) {
-      return result.highlight && result.highlight[path] && result.highlight[path].length && result.highlight[path][0];
-    });
-    return path ? result.highlight[path][0] : undefined;
-  }
+  function getHighlightPathList(highlights, result, text) {
+    // The highlights property maps search terms to unique IDs.
+    // The result.matched_queries property lists highlights in the format <id>:<path>:<text>
 
-  function getHighlightPathList(item, result, highlightMapping) {
     /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-    var pathList = result.matched_queries;
+    var matchedQueries = result.matched_queries;
     /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
 
-    if(pathList && pathList.length && highlightMapping && highlightMapping[item.id]) {
-      return pathList.filter(function(path) {
-        return _.startsWith(path, highlightMapping[item.id]);
+    // If a highlight mapping exists for the text, check the matched queries.
+    if(highlights && text && highlights[text] && matchedQueries && matchedQueries.length) {
+      return matchedQueries.filter(function(path) {
+        return _.startsWith(path, highlights[text]);
       }).map(function(path) {
+        // Return the path in the matched queries.
         return path.split(':')[1];
       });
     }
@@ -103,275 +124,803 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
     return [];
   }
 
-  function cleanHighlight(text, type) {
-    // Ignore partial matches for emails.
-    if(type === 'email' && (!_.startsWith(text, '<em>') || !_.endsWith(text, '</em>'))) {
-      return text.toLowerCase();
+  function getHighlightPathListFromDataOfType(highlights, itemId, itemText, itemType, result) {
+    var wordsOrPhrases = [];
+    if(itemType === 'location') {
+      // Add the city name.
+      wordsOrPhrases = [itemId.substring(0, itemId.indexOf(':'))];
+    } else if(itemType === 'phone') {
+      // Add the phone without punctuation.
+      wordsOrPhrases = [itemText, itemText.replace(/\W/g, '')];
+    } else {
+      // Add the full text and all single words in the text.  Remove all punctuation so we can separate the words.
+      wordsOrPhrases = [itemText].concat(itemText.replace(/\W/g, ' ').split(' '));
+    }
+
+    var highlightPaths = {};
+
+    wordsOrPhrases.forEach(function(wordOrPhrase) {
+      var pathList = getHighlightPathList(highlights, result, wordOrPhrase);
+      pathList.forEach(function(path) {
+        highlightPaths[path] = true;
+      });
+    });
+
+    return _.keys(highlightPaths);
+  }
+
+  function checkHighlightedText(text, type) {
+    // TODO Do we have to hard-code <em> or can we make it a config variable?
+    // Ignore partial matches for emails and websites.
+    if((type === 'email' || type === 'tld' || type === 'url') && (!_.startsWith(text, '<em>') || !_.endsWith(text, '</em>'))) {
+      return false;
     }
 
     var output = text;
 
     // Usernames are formatted "<website> <username>".  Ignore matches on the <website>.
     if(type === 'username') {
-      output = output.indexOf(' ') ? output.substring(output.indexOf(' ') + 1) : output;
+      if(output.indexOf(' ')) {
+        var startHighlight = (output.indexOf('<em>') === 0);
+        output = (startHighlight ? '<em>' : '') + output.substring(output.indexOf(' ') + 1);
+      }
     }
 
-    return output.indexOf('<em>') >= 0 ? output.replace(/<\/?em\>/g, '').toLowerCase() : '';
+    // Return whether the given text has both start and end tags.
+    return output.indexOf('<em>') >= 0 && output.indexOf('</em>') >= 0 ? !!(output.replace(/<\/?em\>/g, '')) : false;
   }
 
-  function addHighlight(item, result, type, highlightMapping) {
-    var pathList = getHighlightPathList(item, result, highlightMapping);
-    if(result.highlight && pathList.length) {
-      item.highlight = pathList.some(function(path) {
-        return (result.highlight[path] || []).some(function(text) {
-          var cleanedHighlight = cleanHighlight(text, type);
-          return cleanedHighlight && (('' + item.id).toLowerCase().indexOf(cleanedHighlight) >= 0);
+  function getHighlightedText(highlightsPathList, resultHighlights, type) {
+    var textList = [];
+    if(resultHighlights) {
+      // Find the highlighted text in the result highlights using a highlights path.  Use the first because they are all the same.
+      (highlightsPathList || []).forEach(function(path) {
+        (resultHighlights[path] || []).forEach(function(text) {
+          if(checkHighlightedText(text, type)) {
+            textList.push(text);
+          }
         });
       });
     }
-    return item;
+    return textList.length ? textList[0] : '';
   }
 
-  function addAllHighlights(data, result, type, highlightMapping) {
-    return data.map(function(item) {
-      return addHighlight(item, result, type, highlightMapping);
-    });
-  }
-
-  function getHighlightedExtractionObjectFromResult(result, config, highlightMapping) {
-    var data = getExtractionsFromResult(result, '_source.knowledge_graph.' + config.key, config);
-    if(highlightMapping) {
-      data = addAllHighlights(data, result, config.type, highlightMapping[config.key]);
+  function getHighlightedExtractionObjectFromResult(result, config, highlights) {
+    var data = getExtractionsFromResult(result, config.extractionField, config);
+    if(highlights) {
+      data = data.map(function(item) {
+        // Get the paths from the highlight mapping to search in the result highlights specifically for the given item.
+        var pathList = getHighlightPathListFromDataOfType(highlights[config.key], ('' + item.id).toLowerCase(), ('' + item.text).toLowerCase(), config.type, result);
+        // The highlight in the extraction object is a boolean (YES or NO).
+        item.highlight = !!(getHighlightedText(pathList, result.highlight, config.type));
+        return item;
+      });
     }
     return {
       data: data,
+      icon: config.icon,
+      isDate: config.isDate,
+      isUrl: config.isUrl,
       key: config.key,
-      name: config.titlePlural
+      name: data.length === 1 ? config.title : config.titlePlural,
+      styleClass: config.styleClass,
+      type: config.type,
+      width: config.width
     };
   }
 
-  function getDocumentObject(result, searchFields, documentPage, highlightMapping) {
-    var id = _.get(result, '_source.doc_id');
-    var url = _.get(result, '_source.url');
+  function getResultTags(result, path) {
+    var tags = _.get(result, path, {});
+    return _.keys(tags).reduce(function(object, tag) {
+      /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+      var userClassification = '' + tags[tag].human_annotation;
+      /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+      object[tag] = {
+        type: 'result',
+        user: (userClassification === '1' ? 'positive' : (userClassification === '0' ? 'negative' : undefined))
+      };
+      return object;
+    }, {});
+  }
 
-    if(!id || !url) {
-      return {};
+  function getTitlesOrDescriptions(type, searchFields, result, highlights) {
+    var titleOrDescriptionList = searchFields.filter(function(searchFieldsObject) {
+      return searchFieldsObject.result === type;
+    }).reduce(function(list, searchFieldsObject) {
+      var data = _.get(result, searchFieldsObject.extractionField);
+      if(_.isArray(data)) {
+        return list.concat(data.map(function(dataItem) {
+          return {
+            key: searchFieldsObject.key,
+            link: !!searchFieldsObject.link,
+            name: searchFieldsObject.title,
+            text: dataItem.value
+          };
+        }));
+      }
+      if(_.isObject(data)) {
+        return list.concat({
+          key: searchFieldsObject.key,
+          link: !!searchFieldsObject.link,
+          name: searchFieldsObject.title,
+          text: data.value
+        });
+      }
+      return list.concat({
+        key: searchFieldsObject.key,
+        link: !!searchFieldsObject.link,
+        name: searchFieldsObject.title,
+        text: data
+      });
+    }, []);
+
+    return titleOrDescriptionList.map(function(titleOrDescription) {
+      var text = (titleOrDescription.text || '');
+
+      // Do not split the title/description into individual words/phrases or else matching extraction highlights may overwrite the title/description text.
+      var pathList = highlights ? getHighlightPathList(highlights[titleOrDescription.key], result, text.toLowerCase()) : [];
+      var highlight = getHighlightedText(pathList, result.highlight, type);
+
+      var backupPath = (type === 'title' ? 'content_extraction.title.text' : 'content_extraction.content_strict.text');
+      var backupHighlight = getHighlightedText([backupPath], result.highlight, type);
+
+      if(!highlight && backupHighlight) {
+        text = backupHighlight.replace(/<\/?em>/g, '');
+        highlight = backupHighlight;
+      }
+
+      // Change newlines to breaks and remove repeat newlines.
+      text = text.replace(/[\n\r][\s]*/g, '<br/>');
+      highlight = highlight.replace(/[\n\r][\s]*/g, '<br/>');
+
+      if(type === 'title') {
+        // Remove breaks from titles.
+        text = text.replace(/<br\/>/g, '');
+        highlight = highlight.replace(/<br\/>/g, '');
+      }
+
+      return {
+        link: titleOrDescription.link,
+        name: titleOrDescription.name,
+        text: text,
+        highlight: highlight || text
+      };
+    });
+  }
+
+  /**
+   * Creates and returns the transformed result object.
+   *
+   * @param {Object} result The elasticsearch result object.
+   * @param {Array} searchFields The list of search fields config objects.
+   * @param {String} icon
+   * @param {String} name
+   * @param {String} styleClass
+   * @param {String} type
+   * @param {Object} highlights The fields mapped to the highlights returned by the search.  An object that maps search fields to objects that map search terms to unique IDs.  For example:
+   * {
+   *   email: {
+   *     abc@gmail.com: 123
+   *   },
+   *   phone: {
+   *     1234567890: 456,
+   *     9876543210: 789
+   *   }
+   * }
+   * @return {Object}
+   */
+  function createResultObject(result, searchFields, icon, name, styleClass, type, highlights) {
+    var id = _.get(result, esConfig.uid ? ('_source.' + esConfig.uid) : '_id');
+
+    if(!id) {
+      return undefined;
     }
 
-    var rank = _.get(result, '_score');
-    var domain = _.get(result, '_source.tld');
+    var timestamp;
+    if(esConfig.timestamp) {
+      timestamp = commonTransforms.getFormattedDate(_.get(result, '_source.' + esConfig.timestamp));
+      if(timestamp === 'None') {
+        timestamp = commonTransforms.getFormattedDate(_.get(result, '_source.timestamp'));
+      }
+    }
+
     var esDataEndpoint = (esConfig && esConfig.esDataEndpoint ? (esConfig.esDataEndpoint + id) : undefined);
 
-    var titleFieldObject = _.find(searchFields, function(object) {
-      return object.result === 'title';
-    });
-    var titleField = titleFieldObject ? titleFieldObject.field : '_source.content_extraction.title.text';
+    var titles = getTitlesOrDescriptions('title', searchFields, result, highlights);
+    var title = !titles.length ? '' : (!esConfig.showMultipleTitles ? titles[0].text : titles.map(function(title) {
+      return title.text;
+    }).join(' '));
 
-    var descriptionFieldObject = _.find(searchFields, function(object) {
-      return object.result === 'description';
-    });
-    var descriptionField = descriptionFieldObject ? descriptionFieldObject.field : '_source.content_extraction.content_strict.text';
+    var isLink = !titles.length ? false : (!esConfig.showMultipleTitles ? titles[0].link : titles.every(function(title) {
+      return title.link;
+    }));
 
-    var documentObject = {
+    var descriptions = getTitlesOrDescriptions('description', searchFields, result, highlights);
+    var description = !descriptions.length ? '' : (!esConfig.showMultipleDescriptions ? descriptions[0].text : descriptions.map(function(description) {
+      return description.text;
+    }).join(' '));
+
+    var resultObject = {
       id: id,
-      url: url,
-      rank: rank ? rank.toFixed(2) : rank,
-      domain: domain || 'No Domain',
-      type: 'document',
-      icon: '', // icon: 'icons:assignment', -- commenting out for now and leaving blank
-      link: commonTransforms.getLink(id, 'entity', 'document'),
-      styleClass: '',
-      cached: commonTransforms.getLink(id, 'cached'),
+      url: _.get(result, '_source.url'),
+      revisions: esConfig.revisions ? _.get(result, '_source.' + esConfig.revisions) : undefined,
+      timestamp: (timestamp === 'None' ? undefined : timestamp),
+      type: type,
+      icon: icon,
+      link: isLink ? commonTransforms.getLink(id, 'result') : undefined,
+      name: name,
+      styleClass: styleClass,
+      tags: getResultTags(result, '_source.knowledge_graph._tags'),
       esData: esDataEndpoint,
-      // TODO
-      title: getSingleStringFromResult(result, titleField) || 'No Title',
-      description: getSingleStringFromResult(result, descriptionField) || 'No Description',
-      highlightedText: getHighlightedText(result, [titleField]),
+      title: title,
+      description: description,
       headerExtractions: [],
       detailExtractions: [],
-      details: []
+      nestedExtractions: [],
+      details: [],
+      series: []
     };
 
-    // TODO Don't truncate the extractions once the data can support it.
-    var truncateFunction = function(extractionObject) {
-      if(!documentPage) {
-        extractionObject.data = extractionObject.data.slice(0, 10);
+    resultObject.highlightedText = !titles.length ? '' : (!esConfig.showMultipleTitles ? titles[0].highlight : titles.map(function(title) {
+      return title.highlight;
+    }).join(' '));
+
+    var finalizeExtractionFunction = function(extractionObject, index) {
+      extractionObject.data = extractionObject.data.sort(function(a, b) {
+        if(extractionObject.type === 'date') {
+          return new Date(a.id) - new Date(b.id);
+        }
+        return ('' + a.text).toLowerCase() - ('' + b.text).toLowerCase();
+      });
+
+      // Transform any list of multiple date extractions into a single date range extraction.
+      if(extractionObject.type === 'date' && extractionObject.data.length > 1) {
+        var begin = extractionObject.data[0];
+        var end = extractionObject.data[extractionObject.data.length - 1];
+        var clone = _.cloneDeep(begin);
+        clone.text = 'From ' + begin.text + ' to ' + end.text;
+        clone.provenances = extractionObject.data.reduce(function(provenances, extraction) {
+          return provenances.concat(extraction.provenances);
+        }, []);
+        clone.count = _.sum(extractionObject.data.map(function(extraction) {
+          return extraction.count;
+        }));
+        var confidences = extractionObject.data.map(function(extraction) {
+          return extraction.confidence;
+        }).filter(function(confidence) {
+          return confidence >= 0;
+        });
+        clone.confidence = (confidences.length ? (_.sum(confidences) / confidences.length) : undefined);
+        extractionObject.data = [clone];
       }
+
+      // Ignore undefined indexes.
+      if(typeof index !== 'undefined') {
+        extractionObject.index = index;
+      }
+
       return extractionObject;
     };
 
-    documentObject.headerExtractions = searchFields.filter(function(object) {
-      return object.result === 'header';
-    }).map(function(object) {
-      return truncateFunction(getHighlightedExtractionObjectFromResult(result, object, highlightMapping));
+    resultObject.headerExtractions = searchFields.filter(function(searchFieldsObject) {
+      return searchFieldsObject.result === 'header';
+    }).map(function(searchFieldsObject, index) {
+      return finalizeExtractionFunction(getHighlightedExtractionObjectFromResult(result, searchFieldsObject, highlights), index);
+    }).sort(function(a, b) {
+      if(a.isUrl && !b.isUrl) {
+        return -1;
+      }
+      if(b.isUrl && !a.isUrl) {
+        return 1;
+      }
+      if(a.isDate && !b.isDate) {
+        return -1;
+      }
+      if(b.isDate && !a.isDate) {
+        return 1;
+      }
+      return a.index - b.index;
     });
 
-    var domainExtraction = getExtraction({
-      key: domain,
-    }, {
-      color: 'light green',
-      key: '_domain',
-      icon: 'av:web',
-      type: 'url'
+    resultObject.detailExtractions = searchFields.filter(function(searchFieldsObject) {
+      return searchFieldsObject.result === 'detail';
+    }).map(function(searchFieldsObject) {
+      return finalizeExtractionFunction(getHighlightedExtractionObjectFromResult(result, searchFieldsObject, highlights));
     });
 
-    documentObject.headerExtractions.splice(0, 0, {
-      data: [domainExtraction],
-      key: '_domain',
-      name: 'Website'
+    resultObject.nestedExtractions = searchFields.filter(function(searchFieldsObject) {
+      return searchFieldsObject.result === 'nested' && searchFieldsObject.type === 'kg_id';
+    }).map(function(searchFieldsObject) {
+      return finalizeExtractionFunction(getHighlightedExtractionObjectFromResult(result, searchFieldsObject, highlights));
     });
 
-    documentObject.detailExtractions = searchFields.filter(function(object) {
-      return object.result === 'detail';
-    }).map(function(object) {
-      return truncateFunction(getHighlightedExtractionObjectFromResult(result, object, highlightMapping));
+    // For now, just get the first field of each type (series, series date, series number, type).
+    var seriesField = searchFields.find(function(searchFieldsObject) {
+      return searchFieldsObject.result === 'series' && searchFieldsObject.type === 'kg_id';
     });
+    var seriesDateField = searchFields.find(function(searchFieldsObject) {
+      return searchFieldsObject.result === 'series' && searchFieldsObject.type === 'date';
+    });
+    var seriesNumberField = searchFields.find(function(searchFieldsObject) {
+      return searchFieldsObject.result === 'series' && searchFieldsObject.type === 'number';
+    });
+    var typeField = searchFields.find(function(searchFieldsObject) {
+      return searchFieldsObject.type === 'type';
+    });
+
+    if(seriesField && seriesDateField && seriesNumberField && typeField) {
+      var types = _.get(result, typeField.extractionField, []);
+      if(types.some(function(type) {
+        return type.key === 'measure';
+      })) {
+        resultObject.series = [{
+          color: commonTransforms.getHexColor(seriesField.color),
+          id: id,
+          dateField: seriesDateField.field,
+          idField: seriesField.field,
+          numberField: seriesNumberField.field,
+          title: seriesField.title,
+          typeField: typeField.field
+        }];
+      }
+    }
 
     if(esDataEndpoint) {
-      documentObject.details.push({
-        name: 'Raw ES Document',
+      resultObject.details.push({
+        name: 'Raw ES Data',
         link: esDataEndpoint,
         text: 'Open'
       });
     }
 
-    documentObject.details.push({
-      name: 'Url',
-      link: url,
-      text: url
-    });
-
-    documentObject.details.push({
-      name: 'Description',
-      highlightedText: getHighlightedText(result, [descriptionField]),
-      text: documentObject.description
-    });
-
-    if(documentObject.cached) {
-      documentObject.details.push({
-        name: 'Cached Ad Webpage',
-        link: documentObject.cached,
-        text: 'Open'
+    if(resultObject.url) {
+      resultObject.details.push({
+        name: 'Url',
+        link: resultObject.url,
+        text: resultObject.url
       });
     }
 
-    // TODO Images
+    if(resultObject.timestamp) {
+      resultObject.details.push({
+        name: 'Timestamp',
+        text: resultObject.timestamp
+      });
+    }
 
-    return documentObject;
-  }
-
-  function createDateObjectFromBucket(dateBucket, config) {
-    return {
-      date: commonTransforms.getFormattedDate(dateBucket.key),
-      icon: config.date.icon,
-      styleClass: config.date.styleClass,
-      data: dateBucket[config.entity.key].buckets.map(function(entityBucket, index) {
-        return getExtraction(entityBucket, config.entity, index);
-      }).filter(commonTransforms.getExtractionFilterFunction(config.entity.type))
-    };
-  }
-
-  function createUnidentifiedEntityObject(config, count) {
-    var text = 'Unidentified ' + config.titlePlural;
-    return {
-      count: count,
-      icon: config.icon,
-      styleClass: commonTransforms.getStyleClass(config.color),
-      text: text,
-      textAndCount: text + ' (' + (count) + ')',
-      type: config.key
-    };
-  }
-
-  function createSubtitle(data) {
-    var subtitle = data.map(function(entityObject) {
-      return entityObject.textAndCount;
+    (!esConfig.showMultipleDescriptions && descriptions.length ? [descriptions[0]] : descriptions).forEach(function(description) {
+      resultObject.details.push({
+        name: description.name,
+        highlightedText: description.highlight || description.text,
+        text: description.text
+      });
     });
-    return subtitle.length ? subtitle[0].text + (subtitle.length > 1 ? (' and ' + (subtitle.length - 1) + ' more') : '') : '';
+
+    if(!esConfig.hideCachedPage) {
+      resultObject.details.push({
+        name: 'Cached Page',
+        link: commonTransforms.getLink(id, 'cached'),
+        text: 'Open in New Tab (Runs External Code)'
+      });
+    }
+
+    // The images should be undefined by default.
+    var images = _.get(result, '_source.objects');
+    resultObject.images = images ? getExtractionsFromList(_.uniqBy(images.map(function(object) {
+      /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+      var id = object.img_sha1;
+      /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+      return {
+        key: id
+      };
+    }), 'key'), esConfig.imageField || {}) : undefined;
+
+    return resultObject;
   }
 
-  function createDateHistogram(buckets, config) {
-    return buckets.reduce(function(histogram, dateBucket) {
+  function getWebpageResultObject(result, searchFields, highlights) {
+    return createResultObject(result, searchFields, esConfig.webpageField.icon, esConfig.webpageField.title, esConfig.webpageField.styleClass, 'webpage', highlights);
+  }
+
+  function getQueryResultObject(result, searchFields, extractionId) {
+    var searchFieldsObject = _.find((searchFields || []), function(object) {
+      return object.key === extractionId;
+    });
+    if(!searchFieldsObject) {
+      return undefined;
+    }
+    return createResultObject(result, searchFields, searchFieldsObject.icon, searchFieldsObject.title, searchFieldsObject.styleClass, searchFieldsObject.key);
+  }
+
+  function createHistogram(buckets, entityConfig, interval, timeStringBegin, timeStringEnd, unidentifiedBucketName) {
+    var timeBegin = timeStringBegin ? commonTransforms.getDateForInterval(timeStringBegin, interval).getTime() : null;
+    var timeEnd = timeStringEnd ? commonTransforms.getDateForInterval(timeStringEnd, interval).getTime() : null;
+
+    var bucketDateToData = buckets.reduce(function(dateToData, dateBucket) {
       /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
       var count = dateBucket.doc_count;
       /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
 
       if(count) {
-        var dateObject = createDateObjectFromBucket(dateBucket, config);
+        var date = commonTransforms.getFormattedDate(dateBucket.key, interval);
+        var data = (entityConfig && dateBucket[entityConfig.key] && dateBucket[entityConfig.key].buckets) ? dateBucket[entityConfig.key].buckets : [];
 
-        var sum = dateObject.data.reduce(function(sum, entityObject) {
-          return sum + entityObject.count;
-        }, 0);
-
-        if(sum < count) {
-          dateObject.data.push(createUnidentifiedEntityObject(count - sum));
+        if(!dateToData[date]) {
+          dateToData[date] = {
+            count: count,
+            data: data
+          };
+        } else {
+          dateToData[date].count += count;
+          dateToData[date].data = dateToData[date].data.concat(data.reduce(function(uniqueData, item) {
+            if(!dateToData[date].data.some(function(existingItem) {
+              return existingItem.key === item.key;
+            })) {
+              uniqueData.push(item);
+            }
+            return uniqueData;
+          }, []));
         }
-
-        if(config.entity.key === config.page.key) {
-          // Filter out the items that do not match the ID for the entity page (only once the unknown item is created).
-          dateObject.data = dateObject.data.filter(function(entityObject) {
-            return entityObject.id === config.id;
-          });
-        }
-
-        // The data list may be empty if none match the ID for the entity page.
-        if(!dateObject.data.length) {
-          return;
-        }
-
-        dateObject.subtitle = createSubtitle(dateObject.data);
-        histogram.push(dateObject);
       }
 
-      return histogram;
-    }, []).sort(function(a, b) {
+      return dateToData;
+    }, {});
+
+    return _.keys(bucketDateToData).reduce(function(timeline, date) {
+      var data = bucketDateToData[date].data.map(function(entityBucket, index) {
+        return getExtraction(entityBucket, entityConfig, index);
+      }).filter(commonTransforms.getExtractionFilterFunction(entityConfig ? entityConfig.type : null));
+
+      var dateObject = {
+        date: date,
+        data: data
+      };
+
+      var sum = dateObject.data.reduce(function(sum, entityObject) {
+        return sum + entityObject.count;
+      }, 0);
+
+      if(sum < bucketDateToData[date].count) {
+        var countLabel = (bucketDateToData[date].count - sum).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        dateObject.data.push({
+          count: bucketDateToData[date].count - sum,
+          icon: entityConfig ? entityConfig.icon : undefined,
+          styleClass: entityConfig ? entityConfig.styleClass : undefined,
+          text: unidentifiedBucketName,
+          textAndCount: unidentifiedBucketName ? (unidentifiedBucketName + ' (' + (countLabel) + ')') : undefined,
+        });
+      }
+
+      // The data list may be empty if none match the ID for the entity page.
+      if(dateObject.data.length) {
+        timeline.push(dateObject);
+      }
+
+      return timeline;
+    }, []).filter(function(item) {
+      var time = new Date(item.date).getTime();
+      return (timeBegin ? time >= timeBegin : true) && (timeEnd ? time <= timeEnd : true);
+    }).sort(function(a, b) {
       // Sort oldest first.
       return new Date(a.date).getTime() - new Date(b.date).getTime();
     });
   }
 
+  function createSparklines(buckets, showUnidentified, timeBegin, timeEnd, entityConfig, pageConfig, pageId) {
+    if(buckets.length < 2) {
+      return [];
+    }
+
+    var unidentifiedTimeline = {
+      icon: entityConfig ? entityConfig.icon : undefined,
+      name: '(Unidentified)',
+      styleClass: entityConfig ? entityConfig.styleClass : undefined,
+      points: []
+    };
+
+    var timelines = buckets.reduce(function(timelines, dateBucket) {
+      var date = commonTransforms.getFormattedDate(dateBucket.key);
+
+      /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+      var count = dateBucket.doc_count;
+      /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+
+      if(count && date) {
+        var sum = 0;
+
+        if(entityConfig && dateBucket[entityConfig.key] && dateBucket[entityConfig.key].buckets) {
+          dateBucket[entityConfig.key].buckets.map(function(entityBucket, index) {
+            return getExtraction(entityBucket, entityConfig, index);
+          }).filter(commonTransforms.getExtractionFilterFunction(entityConfig.type)).forEach(function(dataItem) {
+            var timelineIndex = _.findIndex(timelines, function(timelineItem) {
+              return timelineItem.name === dataItem.text;
+            });
+
+            if(timelineIndex < 0) {
+              timelines.push({
+                icon: dataItem.icon,
+                id: dataItem.id,
+                link: dataItem.link,
+                maxCount: 0,
+                name: dataItem.text,
+                styleClass: dataItem.styleClass,
+                points: []
+              });
+              timelineIndex = timelines.length - 1;
+            }
+
+            timelines[timelineIndex].points.push({
+              count: dataItem.count,
+              date: date
+            });
+
+            timelines[timelineIndex].maxCount = Math.max(timelines[timelineIndex].maxCount, dataItem.count);
+
+            sum += dataItem.count;
+          });
+        }
+
+        if(sum < count) {
+          unidentifiedTimeline.points.push({
+            count: count - sum,
+            date: date
+          });
+        }
+      }
+
+      return timelines;
+    }, []).sort(function(a, b) {
+      // Sort the page item to the top.
+      if(entityConfig && pageConfig && entityConfig.key === pageConfig.key) {
+        if(a.id === pageId) {
+          return -1;
+        }
+        if(b.id === pageId) {
+          return 1;
+        }
+      }
+
+      // Sort the other items by max count and then alphabetically.
+      if(a.maxCount !== b.maxCount) {
+        return a.maxCount > b.maxCount ? -1 : 1;
+      }
+
+      if(a.name.localeCompare) {
+        return a.name.localeCompare(b.name, undefined, {
+          numeric: true
+        });
+      }
+
+      return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
+    });
+
+    if(showUnidentified && unidentifiedTimeline.points.length) {
+      timelines.push(unidentifiedTimeline);
+    }
+
+    return timelines.map(function(timelineItem) {
+      timelineItem.points = timelineItem.points.filter(function(item) {
+        var time = new Date(item.date).getTime();
+        return (timeBegin ? time >= timeBegin : true) && (timeEnd ? time <= timeEnd : true);
+      }).sort(function(a, b) {
+        // Sort oldest points first.
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
+      return timelineItem;
+    }).filter(function(timelineItem) {
+      return timelineItem.points.length > 1;
+    });
+  }
+
   return {
-    document: function(data, searchFields) {
+    /**
+     * Returns the cached page data for the given query results.
+     *
+     * @param {Object} data
+     * @return {String}
+     */
+    cache: function(data) {
       if(data && data.hits && data.hits.hits && data.hits.hits.length) {
-        return getDocumentObject(data.hits.hits[0], searchFields, true);
+        return _.get(data.hits.hits[0], '_source.raw_content', '');
+      }
+      return '';
+    },
+
+    /**
+     * Returns the link for the image entity page with the given ID.
+     *
+     * @param {String} id
+     * @return {String}
+     */
+    entityPageLinkForImageId: function(id) {
+      return commonTransforms.getLink(id, esConfig.imageField.link, esConfig.imageField.type, esConfig.imageField.key);
+    },
+
+    /**
+     * Returns the list of extraction objects for the given query results to show in an aggregation-display.
+     *
+     * @param {Object} data
+     * @param {Object} config
+     * @return {Array}
+     */
+    extractions: function(data, config) {
+      return getExtractionsFromList(getAggregationBuckets(data, config.entity.key), config.entity, true).filter(function(extraction) {
+        var result = config.id && config.page && config.page.type === config.entity.key ? extraction.id !== config.id : true;
+        return result;
+      });
+    },
+
+    /**
+     * Returns the data for the given result to show in maps in the result page.
+     *
+     * @param {Object} result
+     * @param {Object} searchFields
+     * @return {Array}
+     */
+    maps: function(result, searchFields) {
+      if(!result || !result.headerExtractions || !result.detailExtractions) {
+        return undefined;
+      }
+
+      var locationFields = searchFields.filter(function(searchFieldsObject) {
+        return searchFieldsObject.isLocation && !searchFieldsObject.isHidden;
+      });
+
+      return locationFields.reduce(function(info, searchFieldsObject) {
+        var headerIndex = _.findIndex(result.headerExtractions, function(extraction) {
+          return extraction.key === searchFieldsObject.key;
+        });
+
+        if(headerIndex >= 0) {
+          info.push({
+            config: searchFieldsObject,
+            data: result.headerExtractions[headerIndex].data
+          });
+        }
+
+        var detailIndex = _.findIndex(result.detailExtractions, function(extraction) {
+          return extraction.key === searchFieldsObject.key;
+        });
+
+        if(detailIndex >= 0) {
+          info.push({
+            config: searchFieldsObject,
+            data: result.detailExtractions[headerIndex].data
+          });
+        }
+
+        return info;
+      }, []);
+    },
+
+    /**
+     * Returns the collection of result IDs mapped to result objects for the given query results to show as nested data in a result-list.
+     *
+     * @param {Object} data
+     * @param {Object} config
+     * @return {Object}
+     */
+    nestedResults: function(data, config) {
+      if(data && data.hits && data.hits.hits && data.hits.hits.length) {
+        var returnData = data.hits.hits.map(function(result) {
+          return getQueryResultObject(result, config.searchFields, config.extractionId);
+        }).filter(function(object) {
+          return !_.isUndefined(object);
+        });
+        return returnData.reduce(function(collection, result) {
+          collection[result.id] = result;
+          return collection;
+        }, {});
       }
       return {};
     },
 
-    documents: function(data, searchFields) {
+    /**
+     * Returns the result object for the given query results to show in the result page.
+     *
+     * @param {Object} data
+     * @param {Object} searchFields
+     * @return {Object}
+     */
+    result: function(data, searchFields) {
       if(data && data.hits && data.hits.hits && data.hits.hits.length) {
-        return data.hits.hits.map(function(result) {
-          // Data returned by the searchResults function from the searchTransforms will have a "fields" property.
-          return getDocumentObject(result, searchFields, false, data.fields);
+        return getWebpageResultObject(data.hits.hits[0], searchFields) || {};
+      }
+      return {};
+    },
+
+    /**
+     * Returns the list of result objects for the given query results to show in a result-list.
+     *
+     * @param {Object} data
+     * @param {Object} searchFields
+     * @return {Array}
+     */
+    results: function(data, searchFields) {
+      if(data && data.hits && data.hits.hits && data.hits.hits.length) {
+        var returnData = data.hits.hits.map(function(result) {
+          // Data returned by the searchResults function from the searchTransforms will have a "highlights" property.
+          return getWebpageResultObject(result, searchFields, data.highlights);
+        }).filter(function(object) {
+          return !_.isUndefined(object);
         });
+        return returnData;
       }
       return [];
     },
 
-    externalImageLink: function(id) {
-      return commonTransforms.getLink(id, 'image');
+    /**
+     * Returns the timeline data for the search page sparkline chart (by item, then by date) with unidentified data.
+     *
+     * @param {Object} data
+     * @param {Object} config
+     * @return {Object}
+     */
+    searchPageTimeline: function(data, config) {
+      var buckets = getAggregationBuckets(data, config.name);
+      if(buckets.length > 1) {
+        return {
+          begin: commonTransforms.getFormattedDate(config.begin || buckets[0].key),
+          end: commonTransforms.getFormattedDate(config.end || buckets[buckets.length - 1].key),
+          sparklines: createSparklines(buckets, true, (config.begin ? new Date(config.begin).getTime() : null), (config.end ? new Date(config.end).getTime() : null))
+        };
+      }
+      return {
+        sparklines: []
+      };
     },
 
-    extractions: function(data, config) {
-      var extractions = [];
-      var sayOther = false;
-
-      if(data && data.aggregations && data.aggregations[config.entity.key] && data.aggregations[config.entity.key][config.entity.key]) {
-        extractions = getExtractionsFromList(data.aggregations[config.entity.key][config.entity.key].buckets || [], config.entity).filter(function(extraction) {
-          var result = config.id && config.page && config.page.type === config.entity.type ? extraction.id !== config.id : true;
-          sayOther = sayOther || !result;
-          return result;
+    /**
+     * Returns the time series for the given query results to show in a bar chart.
+     *
+     * @param {Object} data
+     * @param {Object} config
+     * @return {Array}
+     */
+    series: function(data, config) {
+      if(data && data.hits && data.hits.hits && data.hits.hits.length) {
+        /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+        var buckets = data.hits.hits.reduce(function(bucketsInLoop, result) {
+          var dates = _.get(result, config.dateField, []);
+          var numbers = _.get(result, config.numberField, []);
+          for(var i = 0; i < Math.min(dates.length, numbers.length); ++i) {
+            bucketsInLoop.push({
+              key: dates[i].key,
+              doc_count: parseFloat(numbers[i].key)
+            });
+          }
+          return bucketsInLoop;
+        }, []).filter(function(bucket) {
+          return bucket.key && bucket.doc_count;
         });
+        /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+        return createHistogram(buckets, {}, config.interval);
       }
-
-      return extractions;
+      return [];
     },
 
-    histogram: function(data, config) {
-      if(data && data.aggregations && data.aggregations[config.date.key] && data.aggregations[config.date.key][config.date.key]) {
-        return createDateHistogram(data.aggregations[config.date.key][config.date.key].buckets, config);
+    /**
+     * Returns the timeline data for the given query results to show in a timeline bar chart (by date, then by item)
+     * and a sparkline chart (by item, then by date) in an object with the "dates" and "items" properties.
+     *
+     * @param {Object} data
+     * @param {Object} config
+     * @return {Object}
+     */
+    timelines: function(data, config) {
+      var buckets = getAggregationBuckets(data, config.name);
+      if(buckets.length > 1) {
+        return {
+          begin: commonTransforms.getFormattedDate(config.begin || buckets[0].key),
+          end: commonTransforms.getFormattedDate(config.end || buckets[buckets.length - 1].key),
+          histogram: createHistogram(buckets, config.entity, config.interval, config.begin, config.end, config.unidentified || '(Unidentified)'),
+          sparklines: createSparklines(buckets, false, null, null, config.entity, config.page, config.id)
+        };
       }
-      return {};
+      return {
+        histogram: [],
+        sparklines: []
+      };
     }
   };
 });

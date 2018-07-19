@@ -1,0 +1,196 @@
+<!--
+Copyright 2018 Next Century Corporation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+
+<dom-module id="page-styles">
+  <template>
+    <style include="iron-flex iron-flex-reverse iron-flex-alignment iron-flex-factors iron-positioning"></style>
+
+    <style>
+      /* Application theme */
+      :root {
+        --primary-color: #757575; /* paper-grey-600 */
+        --primary-background-color: #f5f5f5; /* paper-grey-100 */
+        --primary-text-color: #212121; /* paper-grey-900 */
+        --secondary-text-color: #757575; /* paper-grey-600 */
+        --disabled-text-color: #e0e0e0; /* paper-grey-300 */
+        --divider-color: #e0e0e0; /* paper-grey-300 */
+        --navbar-color: #212121; /* paper-grey-900 */
+      }
+
+      body {
+        /* Flexbox can cause scrollbars to be shown in IE when not needed so hide them. */
+        overflow: hidden;
+      }
+
+      /*********************************************************
+      /*
+      /*  New stuff for index.html. Maybe it goes in its own page style,
+      /*  because right now this breaks the entity page style.
+      /*
+      /*********************************************************/
+
+      #logoLink {
+        height: 30px;
+      }
+
+      #logoLinkBigger {
+        height: 50px;
+      }
+
+      #logo {
+        min-height: 30px;
+        max-height: 30px;
+        min-width: 70px;
+        max-width: 70px;
+      }
+
+      #logoBigger {
+        min-height: 50px;
+        max-height: 50px;
+        min-width: 110px;
+        max-width: 110px;
+      }
+
+      #advancedSearchButton {
+        margin-left: 5px;
+        --icon-button-color: white;
+        --icon-button-active-color: greenyellow;
+        --icon-button-hovering-color: greenyellow;
+      }
+
+      #menuButton {
+        margin-left: 10px;
+        --icon-button-color: white;
+        --icon-button-active-color: greenyellow;
+        --icon-button-hovering-color: greenyellow;
+      }
+
+      #toggleDrawerButton {
+        margin-right: 10px;
+        --icon-button-active-color: greenyellow;
+        --icon-button-hovering-color: greenyellow;
+      }
+
+      #menuDropdown div[slot="dropdown-content"] {
+        background-color: var(--navbar-color);
+        border: 1px solid var(--navbar-color);
+        border-radius: 2px;
+        color: white;
+        overflow: hidden;
+      }
+
+      #menuDropdown div[slot="dropdown-content"] paper-icon-item {
+        --paper-item-icon-width: 20px;
+        --paper-item-icon: {
+          --iron-icon-height: 20px;
+          --iron-icon-width: 20px;
+          margin-right: 10px;
+        }
+        --paper-icon-item: {
+          border: 1px solid white;
+          cursor: pointer;
+          padding: 0 15px;
+          /* Below is needed for IE */
+          line-height: 48px;
+          min-width: 300px;
+          /* Above is needed for IE */
+        }
+        --paper-item-disabled-color: var(--paper-grey-500);
+      }
+
+      #menuDropdown div[slot="dropdown-content"] paper-icon-item:hover {
+        color: greenyellow;
+      }
+
+      export-button {
+        margin-left: 10px;
+      }
+
+      .fields-menu > div {
+        color: var(--secondary-text-color);
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 30px;
+        margin-left: 10px;
+        min-height: 30px;
+        text-transform: uppercase;
+      }
+
+      dropdown-menu {
+        margin-left: 10px;
+      }
+
+      .note {
+        font-style: italic;
+        color: var(--secondary-text-color);
+        font-size: 14px;
+        line-height: 20px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+
+      loading-spinner {
+        margin: 10px;
+      }
+
+      /*********************************************************/
+
+      /* Material Design Adaptive Breakpoints */
+      /*
+        Below you'll find CSS media queries based on the breakpoint guidance
+        published by the Material Design team. You can choose to use, customise
+        or remove these breakpoints based on your needs.
+
+        http://www.google.com/design/spec/layout/adaptive-ui.html#adaptive-ui-breakpoints
+       */
+
+      /* mobile-small */
+      @media all and (min-width: 0) and (max-width: 360px) and (orientation: portrait) { }
+      /* mobile-large */
+      @media all and (min-width: 361px) and (orientation: portrait) { }
+      /* mobile-small-landscape */
+      @media all and (min-width: 0) and (max-width: 480px) and (orientation: landscape) { }
+      /* mobile-large-landscape */
+      @media all and (min-width: 481px) and (orientation: landscape) { }
+      /* tablet-small-landscape */
+      @media all and (min-width: 600px) and (max-width: 960px) and (orientation: landscape) { }
+      /* tablet-large-landscape */
+      @media all and (min-width: 961px) and (orientation: landscape) { }
+      /* tablet-small */
+      @media all and (min-width: 600px) and (orientation: portrait) { }
+      /* tablet-large */
+      @media all and (min-width: 601px) and (max-width: 840px) and (orientation : portrait) { }
+      /* desktop-x-small-landscape */
+      @media all and (min-width: 0) and (max-width: 480px) and (orientation: landscape) { }
+      /* desktop-x-small */
+      @media all and (min-width: 0) and (max-width: 480px) and (max-aspect-ratio: 4/3) { }
+      /* desktop-small-landscape */
+      @media all and (min-width: 481px) and (max-width: 840px) and (orientation: landscape) { }
+      /* desktop-small */
+      @media all and (min-width: 481px) and (max-width: 840px) and (max-aspect-ratio: 4/3) { }
+      /* desktop-medium-landscape */
+      @media all and (min-width: 841px) and (max-width: 1280px) and (orientation: landscape) { }
+      /* desktop-medium */
+      @media all and (min-width: 841px) and (max-width: 1280px) and (max-aspect-ratio: 4/3) { }
+      /* desktop-large */
+      @media all and (min-width: 1281px) and (max-width: 1600px) { }
+      /* desktop-xlarge */
+      @media all and (min-width: 1601px) and (max-width: 1920px) { }
+    </style>
+  </template>
+</dom-module>
