@@ -1,7 +1,8 @@
 {
   "name": "dig-ui",
-  "version": "3.4.1",
-  "description": "Customizable DIG search and visualization interface for any domain",
+  "version": "3.4.2",
+  "description":
+    "Customizable DIG search and visualization interface for any domain",
   "license": "Apache-2.0",
   "author": "Next Century Corporation",
   "main": "server/app.js",
@@ -67,6 +68,7 @@
     "gulp": "gulp",
     "test": "gulp test:local",
     "start": "node server/app.js",
-    "update-webdriver": "node node_modules/grunt-protractor-runner/node_modules/protractor/bin/webdriver-manager update"
+    "update-webdriver":
+      "node node_modules/grunt-protractor-runner/node_modules/protractor/bin/webdriver-manager update"
   }
 }
