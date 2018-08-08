@@ -5,38 +5,39 @@ cd "${0%/*}"
 
 echo "Looking for DIG indices..."
 
-logs=$1/dig-logs
+es_base=${1%/}
+
+response=$(curl $es_base --write-out %{http_code} --silent --output /dev/null)
+until [[ $response = "200" ]]
+do
+  response=$(curl $es_base --write-out %{http_code} --silent --output /dev/null)
+  sleep 2
+done
+
+
+logs=$es_base/dig-logs
 response=$(curl $logs --write-out %{http_code} --silent --output /dev/null)
-if [ $response = "200" ]
-then
+if [ $response = "200" ]; then
   echo "$logs does exist"
-fi
-if [ $response = "404" ]
-then
-  echo "$logs does not exist"
-  source create_logs_index.sh $1
+else
+  echo "$logs does NOT exist"
+  source create_logs_index.sh $es_base
 fi
 
-profiles=$1/dig-profiles
+profiles=$es_base/dig-profiles
 response=$(curl $profiles --write-out %{http_code} --silent --output /dev/null)
-if [ $response = "200" ]
-then
+if [ $response = "200" ]; then
   echo "$profiles does exist"
-fi
-if [ $response = "404" ]
-then
-  echo "$profiles does not exist"
-  source create_profiles_index.sh $1
+else
+  echo "$profiles does NOT exist"
+  source create_profiles_index.sh $es_base
 fi
 
-states=$1/dig-states
+states=$es_base/dig-states
 response=$(curl $states --write-out %{http_code} --silent --output /dev/null)
-if [ $response = "200" ]
-then
+if [ $response = "200" ]; then
   echo "$states does exist"
-fi
-if [ $response = "404" ]
-then
-  echo "$states does not exist"
-  source create_states_index.sh $1
+else
+  echo "$states does NOT exist"
+  source create_states_index.sh $es_base
 fi

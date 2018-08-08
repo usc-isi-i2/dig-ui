@@ -10,3 +10,5 @@ package-lock.json
 *.swp
 .tmp
 *.csv
+**/.DS_Store
+.DS_Store
