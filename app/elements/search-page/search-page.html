@@ -15,6 +15,9 @@ limitations under the License.
 -->
 
 <link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/app-layout/app-header-layout/app-header-layout.html">
+<link rel="import" href="../../bower_components/app-layout/app-header/app-header.html">
+<link rel="import" href="../../bower_components/app-layout/app-scroll-effects/app-scroll-effects.html">
 <link rel="import" href="../../bower_components/dig-logger/dig-logger.html">
 <link rel="import" href="../../bower_components/dropdown-menu/dropdown-menu.html">
 <link rel="import" href="../../bower_components/elastic-client/elastic-client.html">
@@ -168,6 +171,19 @@ limitations under the License.
       #searchResultList {
         --result-list-max-height: none;
       }
+
+      app-header {
+        color: #111;
+        background-color: #f5f5f5;
+        height: auto;
+        width: 100%;
+        position: inherit;
+      }
+
+      app-header-layout div {
+        padding-top: 0px;
+      }
+
     </style>
 
     <iron-ajax
@@ -751,12 +767,12 @@ limitations under the License.
               <img id="logoBigger" src="/dig-ui/dig-logo-bigger.png" alt="">
             </a>
 
-            <search-box 
+            <search-box
               date-config="[[datePropertiesToKeys]]"
               network-expansion-parameters="{{networkExpansionParameters}}"
               search-fields-config="[[searchFieldsDialogConfig]]"
               free-text-search-fields="[[freeTextSearchFields]]"
-              process-request="{{processRequest}}" 
+              process-request="{{processRequest}}"
               search-parameters="{{searchParameters}}">
             </search-box>
 
@@ -774,7 +790,7 @@ limitations under the License.
               toggle-dialog-callback="[[searchFieldsDialogCallbacks.toggleDialog]]"
               handle-search-callback="[[searchFieldsDialogCallbacks.handleSearch]]"
               free-text-search-fields="[[freeTextSearchFields]]">
-            </search-fields-button>  
+            </search-fields-button>
           </template>
 
           <template is="dom-if" if="[[serverConfig.username]]">
@@ -976,156 +992,167 @@ limitations under the License.
               </paper-material>
             </template>
 
-            <template is="dom-if" if="[[!esConfig.hideTimelines]]">
-              <template is="dom-if" if="[[shouldShowBarChart(timelineResults.hour)]]">
-                <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
-                  <zoomable-bar-chart
-                    bar-property="date"
-                    data="[[timelineResults.hour.histogram]]"
-                    default-color="#212121"
-                    default-label="[[serverConfig.resultNamePlural]]"
-                    height="85"
-                    hide-overview
-                    interval="hour"
-                    label-property="text"
-                    load
-                    loading="[[timelineLoading.hour]]"
-                    source="[[serverConfig.resultNamePlural]]"
-                    stack-property="data"
-                    timeline>
-                  </zoomable-bar-chart>
-                </paper-material>
+            <app-header-layout>
+              <app-header
+                 condenses="true"
+                 reveals="true"
+                 effects="fade-background waterfall"
+              >
+                <template is="dom-if" if="[[!esConfig.hideTimelines]]">
+                  <!-- [[!esConfig.hideTimelines]] -->
+                  <template is="dom-if" if="[[shouldShowBarChart(timelineResults.hour)]]">
+                    <!-- [[shouldShowBarChart(timelineResults.hour)]] -->
+                    <paper-material id="searchTimeline" class="layout vertical" elevation="2">
+                      <zoomable-bar-chart
+                        bar-property="date"
+                        data="[[timelineResults.hour.histogram]]"
+                        default-color="#212121"
+                        default-label="[[serverConfig.resultNamePlural]]"
+                        height="85"
+                        hide-overview
+                        interval="hour"
+                        label-property="text"
+                        load
+                        loading="[[timelineLoading.hour]]"
+                        source="[[serverConfig.resultNamePlural]]"
+                        stack-property="data"
+                        timeline>
+                      </zoomable-bar-chart>
+                    </paper-material>
+                  </template>
+
+                  <template is="dom-if" if="[[shouldShowBarChart(timelineResults.day, timelineResults.hour)]]">
+                    <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
+                      <zoomable-bar-chart
+                        bar-property="date"
+                        data="[[timelineResults.day.histogram]]"
+                        default-color="#212121"
+                        default-label="[[serverConfig.resultNamePlural]]"
+                        height="85"
+                        hide-overview
+                        interval="day"
+                        label-property="text"
+                        load
+                        loading="[[timelineLoading.day]]"
+                        source="[[serverConfig.resultNamePlural]]"
+                        stack-property="data"
+                        timeline>
+                      </zoomable-bar-chart>
+                    </paper-material>
+                  </template>
+
+                  <template is="dom-if" if="[[shouldShowBarChart(timelineResults.week, timelineResults.day)]]">
+                    <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
+                      <zoomable-bar-chart
+                        bar-property="date"
+                        data="[[timelineResults.week.histogram]]"
+                        default-color="#212121"
+                        default-label="[[serverConfig.resultNamePlural]]"
+                        height="85"
+                        hide-overview
+                        interval="week"
+                        label-property="text"
+                        load
+                        loading="[[timelineLoading.week]]"
+                        source="[[serverConfig.resultNamePlural]]"
+                        stack-property="data"
+                        timeline>
+                      </zoomable-bar-chart>
+                    </paper-material>
+                  </template>
+
+                  <template is="dom-if" if="[[shouldShowBarChart(timelineResults.month, timelineResults.week)]]">
+                    <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
+                      <zoomable-bar-chart
+                        bar-property="date"
+                        data="[[timelineResults.month.histogram]]"
+                        default-color="#212121"
+                        default-label="[[serverConfig.resultNamePlural]]"
+                        height="85"
+                        hide-overview
+                        interval="month"
+                        label-property="text"
+                        load
+                        loading="[[timelineLoading.month]]"
+                        source="[[serverConfig.resultNamePlural]]"
+                        stack-property="data"
+                        timeline>
+                      </zoomable-bar-chart>
+                    </paper-material>
+                  </template>
+
+                  <template is="dom-if" if="[[shouldShowBarChart(timelineResults.year, timelineResults.month)]]">
+                    <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
+                      <zoomable-bar-chart
+                        bar-property="date"
+                        data="[[timelineResults.year.histogram]]"
+                        default-color="#212121"
+                        default-label="[[serverConfig.resultNamePlural]]"
+                        height="85"
+                        hide-overview
+                        interval="year"
+                        label-property="text"
+                        load
+                        loading="[[timelineLoading.year]]"
+                        source="[[serverConfig.resultNamePlural]]"
+                        stack-property="data"
+                        timeline>
+                      </zoomable-bar-chart>
+                    </paper-material>
+                  </template>
+                </template>
+              </app-header>
+
+              <template is="dom-if" if="[[!serverConfig.hideDatabaseInfo]]">
+                <template is="dom-if" if="[[!pageWasNotJustOpened]]">
+                  <database-details
+                    client="[[esClient]]"
+                    index-name="[[esConfig.esIndex]]"
+                    index-types="[[esConfig.esType]]"
+                    pretty-domain="[[prettyDomain]]"
+                    result-type="[[serverConfig.resultNameSingular]]"
+                    show="[[!pageWasNotJustOpened]]"
+                    timeline-function="[[transforms.entity.timelines]]"
+                    timestamp-field="[[esConfig.timestamp]]">
+                  </database-details>
+                </template>
               </template>
 
-              <template is="dom-if" if="[[shouldShowBarChart(timelineResults.day, timelineResults.hour)]]">
-                <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
-                  <zoomable-bar-chart
-                    bar-property="date"
-                    data="[[timelineResults.day.histogram]]"
-                    default-color="#212121"
-                    default-label="[[serverConfig.resultNamePlural]]"
-                    height="85"
-                    hide-overview
-                    interval="day"
-                    label-property="text"
-                    load
-                    loading="[[timelineLoading.day]]"
-                    source="[[serverConfig.resultNamePlural]]"
-                    stack-property="data"
-                    timeline>
-                  </zoomable-bar-chart>
-                </paper-material>
-              </template>
+              <result-list
+                id="searchResultList"
+                new-tab
+                text-property="title"
+                query-results="[[searchResults]]"
+                total-results="[[searchTotal]]"
+                shown-results="{{searchResultsShown}}"
+                page="{{searchPage}}"
+                page-size="10"
+                loading="[[searchLoading]]"
+                pretty-name="[[serverConfig.resultNamePlural]]"
+                pretty-name-singular="[[serverConfig.resultNameSingular]]"
+                header="{{searchTitle}}"
+                client="[[esClient]]"
+                index-name="[[esConfig.esIndex]]"
+                index-types="[[esConfig.esType]]"
+                id-field="_id"
+                search-fields="[[searchFields]]"
+                series-data-type="measurement"
+                source-include-cached-page='["raw_content"]'
+                source-include-nested-data="[[getSourceIncludes(serverConfig.sendSearchesDirectlyToES, esConfig.timestamp, esConfig.uid)]]"
+                source-include-series='["knowledge_graph.event_date.key","knowledge_graph.value.key"]'
+                transform-cached-page="[[transforms.entity.cache]]"
+                transform-nested-data="[[transforms.entity.nestedResults]]"
+                transform-series-config='{"dateField":"_source.knowledge_graph.event_date","numberField":"_source.knowledge_graph.value"}'
+                transform-series-function="[[transforms.entity.series]]"
+                small-image-style-class="[[findBlurStyleClass(blurImages)]]"
+                large-image-style-class="[[findBlurStyleClass(blurImages, 'large')]]"
+                newline-tag="[[esConfig.newlineTag]]"
+                hide-cached-page="[[serverConfig.hideCachedPage]]"
+                hide-confidences
+                tag-manager="[[tagManager]]">
+              </result-list>
+            </app-header-layout>
 
-              <template is="dom-if" if="[[shouldShowBarChart(timelineResults.week, timelineResults.day)]]">
-                <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
-                  <zoomable-bar-chart
-                    bar-property="date"
-                    data="[[timelineResults.week.histogram]]"
-                    default-color="#212121"
-                    default-label="[[serverConfig.resultNamePlural]]"
-                    height="85"
-                    hide-overview
-                    interval="week"
-                    label-property="text"
-                    load
-                    loading="[[timelineLoading.week]]"
-                    source="[[serverConfig.resultNamePlural]]"
-                    stack-property="data"
-                    timeline>
-                  </zoomable-bar-chart>
-                </paper-material>
-              </template>
-
-              <template is="dom-if" if="[[shouldShowBarChart(timelineResults.month, timelineResults.week)]]">
-                <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
-                  <zoomable-bar-chart
-                    bar-property="date"
-                    data="[[timelineResults.month.histogram]]"
-                    default-color="#212121"
-                    default-label="[[serverConfig.resultNamePlural]]"
-                    height="85"
-                    hide-overview
-                    interval="month"
-                    label-property="text"
-                    load
-                    loading="[[timelineLoading.month]]"
-                    source="[[serverConfig.resultNamePlural]]"
-                    stack-property="data"
-                    timeline>
-                  </zoomable-bar-chart>
-                </paper-material>
-              </template>
-
-              <template is="dom-if" if="[[shouldShowBarChart(timelineResults.year, timelineResults.month)]]">
-                <paper-material slot="header" id="searchTimeline" class="layout vertical" elevation="2">
-                  <zoomable-bar-chart
-                    bar-property="date"
-                    data="[[timelineResults.year.histogram]]"
-                    default-color="#212121"
-                    default-label="[[serverConfig.resultNamePlural]]"
-                    height="85"
-                    hide-overview
-                    interval="year"
-                    label-property="text"
-                    load
-                    loading="[[timelineLoading.year]]"
-                    source="[[serverConfig.resultNamePlural]]"
-                    stack-property="data"
-                    timeline>
-                  </zoomable-bar-chart>
-                </paper-material>
-              </template>
-            </template>
-
-            <template is="dom-if" if="[[!serverConfig.hideDatabaseInfo]]">
-              <template is="dom-if" if="[[!pageWasNotJustOpened]]">
-                <database-details
-                  client="[[esClient]]"
-                  index-name="[[esConfig.esIndex]]"
-                  index-types="[[esConfig.esType]]"
-                  pretty-domain="[[prettyDomain]]"
-                  result-type="[[serverConfig.resultNameSingular]]"
-                  show="[[!pageWasNotJustOpened]]"
-                  timeline-function="[[transforms.entity.timelines]]"
-                  timestamp-field="[[esConfig.timestamp]]">
-                </database-details>
-              </template>
-            </template>
-
-            <result-list
-              id="searchResultList"
-              new-tab
-              text-property="title"
-              query-results="[[searchResults]]"
-              total-results="[[searchTotal]]"
-              shown-results="{{searchResultsShown}}"
-              page="{{searchPage}}"
-              page-size="10"
-              loading="[[searchLoading]]"
-              pretty-name="[[serverConfig.resultNamePlural]]"
-              pretty-name-singular="[[serverConfig.resultNameSingular]]"
-              header="{{searchTitle}}"
-              client="[[esClient]]"
-              index-name="[[esConfig.esIndex]]"
-              index-types="[[esConfig.esType]]"
-              id-field="_id"
-              search-fields="[[searchFields]]"
-              series-data-type="measurement"
-              source-include-cached-page='["raw_content"]'
-              source-include-nested-data="[[getSourceIncludes(serverConfig.sendSearchesDirectlyToES, esConfig.timestamp, esConfig.uid)]]"
-              source-include-series='["knowledge_graph.event_date.key","knowledge_graph.value.key"]'
-              transform-cached-page="[[transforms.entity.cache]]"
-              transform-nested-data="[[transforms.entity.nestedResults]]"
-              transform-series-config='{"dateField":"_source.knowledge_graph.event_date","numberField":"_source.knowledge_graph.value"}'
-              transform-series-function="[[transforms.entity.series]]"
-              small-image-style-class="[[findBlurStyleClass(blurImages)]]"
-              large-image-style-class="[[findBlurStyleClass(blurImages, 'large')]]"
-              newline-tag="[[esConfig.newlineTag]]"
-              hide-cached-page="[[serverConfig.hideCachedPage]]"
-              hide-confidences
-              tag-manager="[[tagManager]]">
-            </result-list>
           </template>
         </paper-header-panel>
       </paper-drawer-panel>
@@ -1134,778 +1161,937 @@ limitations under the License.
 
   <script>
   (function() {
-    'use strict';
+  'use strict';
 
-    Polymer({
-      /* globals _, DigBehaviors */
-      is: 'search-page',
+  Polymer({
+    /* globals _, DigBehaviors */
+    is: 'search-page',
 
-      behaviors: [
-        DigBehaviors.PageBehavior
-      ],
+    behaviors: [DigBehaviors.PageBehavior],
 
-      properties: {
-        blurImages: {
-          type: Boolean
-        },
-
-        cases: {
-          type: Array
-        },
-
-        clientConfig: {
-          type: Object
-        },
-
-        clientConfigError: {
-          type: Object
-        },
-
-        clientConfigFields: {
-          type: Object
-        },
-
-        clientConfigLoading: {
-          type: Boolean,
-          value: false
-        },
-
-        colorMap: {
-          type: Object
-        },
-
-        configHeader: {
-          computed: 'createAuthHeader(serverConfig)',
-          type: Object
-        },
-
-        dateFieldsToProperties: {
-          type: Object
-        },
-
-        dateMenu: {
-          type: Object
-        },
-
-        datePropertiesToKeys: {
-          type: Object
-        },
-
-        drawerNarrow: {
-          type: Boolean
-        },
-
-        drawerOpened: {
-          type: Boolean,
-          value: false
-        },
-
-        domain: {
-          computed: 'findDomain(parameters, serverConfig)',
-          notify: true,
-          type: String
-        },
-
-        emailAddress: {
-          type: String
-        },
-
-        esClient: {
-          type: Object
-        },
-
-        esConfig: {
-          type: Object
-        },
-
-        esQuery: {
-          type: Object
-        },
-
-        esQueryWithoutDates: {
-          type: Object
-        },
-
-        exportDialogCallbacks: {
-          type: Object
-        },
-
-        facetsQuery: {
-          type: Object
-        },
-
-        freeTextSearchFields: {
-          type: Array
-        },
-
-        hasHistory: {
-          type: Boolean
-        },
-
-        imagesFromResults: {
-          computed: 'findImagesFromResults(searchResultsShown)',
-          type: Array
-        },
-
-        imagesProcessing: {
-          type: Array,
-          value: function() {
-            return [];
-          }
-        },
-
-        imagesUploaded: {
-          type: Array,
-          value: function() {
-            return [];
-          }
-        },
-
-        imageFaceSearchList: {
-          type: Array,
-          value: function() {
-            return [];
-          }
-        },
-
-        imageFaceSearchLoading: {
-          type: Boolean,
-          value: false
-        },
-
-        imageFaceSearchRunning: {
-          type: Boolean,
-          value: false
-        },
-
-        imageFaceSearchThreshold: {
-          type: Number,
-          value: 0.1
-        },
-
-        imageSimilaritySearchList: {
-          type: Array,
-          value: function() {
-            return [];
-          }
-        },
-
-        imageSimilaritySearchLoading: {
-          type: Boolean,
-          value: false
-        },
-
-        imageSimilaritySearchRunning: {
-          type: Boolean,
-          value: false
-        },
-
-        imageSimilaritySearchThreshold: {
-          type: Number,
-          value: 0.3
-        },
-
-        logger: {
-          type: Object
-        },
-
-        logMessage: {
-          type: Object
-        },
-
-        menuOpened: {
-          type: Boolean
-        },
-
-        networkExpansionParameters: {
-          type: Object
-        },
-
-        notifications: {
-          type: Boolean
-        },
-
-        notificationInterval: {
-          type: String
-        },
-
-        openedDatabaseDetail: {
-          type: Boolean
-        },
-
-        pageWasNotJustOpened: {
-          computed: 'computePageWasNotJustOpened(searchParameters, searchParameters.*)',
-          type: Boolean,
-          value: false
-        },
-
-        parameters: {
-          computed: 'getUrlParameters()',
-          type: Object
-        },
-
-        prettyDomain: {
-          computed: 'findPrettyDomain(domain, serverConfig)',
-          notify: true,
-          type: String
-        },
-
-        processRequest: {
-          type: Boolean
-        },
-
-        profileManager: {
-          type: Object
-        },
-
-        searchError: {
-          type: Object
-        },
-
-        searchErrorMessage: {
-          type: String
-        },
-
-        searchFields: {
-          type: Array
-        },
-
-        searchFieldsDialogCallbacks: {
-          type: Object
-        },
-
-        searchFieldsDialogConfig: {
-          type: Object
-        },
-
-        searchKeys: {
-          type: Array
-        },
-
-        searchLoading: {
-          notify: true,
-          type: Boolean,
-          value: false
-        },
-
-        searchPage: {
-          type: Number
-        },
-
-        searchParameters: {
-          type: Object
-        },
-
-        searchQuery: {
-          type: Object
-        },
-
-        searchQueryTransformerResults: {
-          type: Object
-        },
-
-        searchResults: {
-          type: Array
-        },
-
-        searchResultsShown: {
-          type: Array
-        },
-
-        searchTitle: {
-          type: String
-        },
-
-        searchTotal: {
-          type: Number
-        },
-
-        serverConfig: {
-          type: Object
-        },
-
-        sortedSearchFields: {
-          type: Array
-        },
-
-        sortKey: {
-          type: String,
-          value: ''
-        },
-
-        sortOrder: {
-          type: String,
-          value: 'desc'
-        },
-
-        stateHistory: {
-          type: Array
-        },
-
-        tagManager: {
-          type: Object
-        },
-
-        timelineAggregation: {
-          type: Object,
-          value: function() {
-            return {};
-          }
-        },
-
-        timelineError: {
-          type: Object,
-          value: function() {
-            return {};
-          }
-        },
-
-        timelineLoading: {
-          type: Object,
-          value: function() {
-            return {};
-          }
-        },
-
-        timelineResults: {
-          type: Object,
-          value: function() {
-            return {};
-          }
-        },
-
-        transforms: {
-          type: Object
-        },
-
-        userId: {
-          type: String
-        },
-
-        userLoading: {
-          type: Boolean,
-          value: false
-        },
-
-        userSettingsDialogCallbacks: {
-          type: Object
-        }
+    properties: {
+      blurImages: {
+        type: Boolean
       },
 
-      observers: [
-        'resetTimelineResults(searchParameters, searchParameters.*)',
-        'runBothImageSearches(imagesUploaded)'
-      ],
-
-      attached: function() {
-        this.assignWindowProperties(this);
+      cases: {
+        type: Array
       },
 
-      /************* PAGE *************/
-      buildSearchState: function(config, oldConfig) {
-        var state = {};
-        _.keys(oldConfig).forEach(function(key) {
-          state[key] = config[key] || {};
-        });
-        return state;
+      clientConfig: {
+        type: Object
       },
 
-      computePageWasNotJustOpened: function() {
-        return this.pageWasNotJustOpened || !this.searchParametersDisabled(this.searchParameters);
+      clientConfigError: {
+        type: Object
       },
 
-      createSearchResultConfig: function(networkExpansionParameters) {
-        return {
-          isNetworkExpansion: !!(_.findKey(networkExpansionParameters, function(key) {
-            return key;
-          }))
-        };
+      clientConfigFields: {
+        type: Object
       },
 
-      createHistogramAggregationConfig: function(interval, dateFieldsToProperties, dateSelected, searchParameters) {
-        var config = {
-          interval: interval,
-          name: this.createHistogramAggregationName(dateFieldsToProperties, dateSelected),
-          unidentified: this.serverConfig.resultNamePlural
-        };
-
-        if(searchParameters) {
-          _.keys(dateFieldsToProperties).forEach(function(dateId) {
-            if(dateId === dateSelected) {
-              var dateObject = dateFieldsToProperties[dateId];
-              var searchObject = searchParameters[dateObject.key];
-              config.begin = searchObject[dateObject.start] ? searchObject[dateObject.start].date : undefined;
-              config.end = searchObject[dateObject.end] ? searchObject[dateObject.end].date : undefined;
-            }
-          });
-        }
-
-        return config;
+      clientConfigLoading: {
+        type: Boolean,
+        value: false
       },
 
-      createHistogramAggregationName: function(dateFieldsToProperties, dateSelected) {
-        var dateId = _.find(_.keys(dateFieldsToProperties), function(dateId) {
-          return dateId === dateSelected;
-        });
-        return dateId ? dateFieldsToProperties[dateId].key + '_timeline' : undefined;
+      colorMap: {
+        type: Object
       },
 
-      createTotalCountFunction: function() {
-        return function(response) {
-          if(response && response.length && response[0] && response[0].result) {
-            if(_.isArray(response[0].result)) {
-              return (response[0].result.length && response[0].result[1].hits && response[0].result[1].hits.total ? response[0].result[1].hits.total : 0);
-            }
-            return (response[0].result.hits && response[0].result.hits.total ? response[0].result.hits.total : 0);
-          }
-          return 0;
-        };
+      configHeader: {
+        computed: 'createAuthHeader(serverConfig)',
+        type: Object
       },
 
-      findImagesFromResults: function(searchResults) {
-        var ids = {};
-        var images = [];
-        searchResults.forEach(function(result) {
-          (result.images || []).forEach(function(image) {
-            if(!ids[image.id]) {
-              images.push(image);
-              ids[image.id] = true;
-            }
-          });
-        });
-        return images;
+      dateFieldsToProperties: {
+        type: Object
       },
 
-      /**
-       * Returns the list of active fields in the given network expansion parameters.
-       *
-       * @param {Object} networkExpansionParameters
-       * @param {Array} searchFields
-       * @return {Array}
-       * @private
-       */
-      getNetworkExpansionFields: function(networkExpansionParameters, searchFields) {
-        if(!networkExpansionParameters) {
+      dateMenu: {
+        type: Object
+      },
+
+      datePropertiesToKeys: {
+        type: Object
+      },
+
+      drawerNarrow: {
+        type: Boolean
+      },
+
+      drawerOpened: {
+        type: Boolean,
+        value: false
+      },
+
+      domain: {
+        computed: 'findDomain(parameters, serverConfig)',
+        notify: true,
+        type: String
+      },
+
+      emailAddress: {
+        type: String
+      },
+
+      esClient: {
+        type: Object
+      },
+
+      esConfig: {
+        type: Object
+      },
+
+      esQuery: {
+        type: Object
+      },
+
+      esQueryWithoutDates: {
+        type: Object
+      },
+
+      exportDialogCallbacks: {
+        type: Object
+      },
+
+      facetsQuery: {
+        type: Object
+      },
+
+      freeTextSearchFields: {
+        type: Array
+      },
+
+      hasHistory: {
+        type: Boolean
+      },
+
+      imagesFromResults: {
+        computed: 'findImagesFromResults(searchResultsShown)',
+        type: Array
+      },
+
+      imagesProcessing: {
+        type: Array,
+        value: function() {
           return [];
         }
+      },
 
-        return searchFields.reduce(function(networkExpansionFields, searchFieldsObject) {
-          if(networkExpansionParameters[searchFieldsObject.key]) {
-            networkExpansionFields.push(searchFieldsObject.title);
+      imagesUploaded: {
+        type: Array,
+        value: function() {
+          return [];
+        }
+      },
+
+      imageFaceSearchList: {
+        type: Array,
+        value: function() {
+          return [];
+        }
+      },
+
+      imageFaceSearchLoading: {
+        type: Boolean,
+        value: false
+      },
+
+      imageFaceSearchRunning: {
+        type: Boolean,
+        value: false
+      },
+
+      imageFaceSearchThreshold: {
+        type: Number,
+        value: 0.1
+      },
+
+      imageSimilaritySearchList: {
+        type: Array,
+        value: function() {
+          return [];
+        }
+      },
+
+      imageSimilaritySearchLoading: {
+        type: Boolean,
+        value: false
+      },
+
+      imageSimilaritySearchRunning: {
+        type: Boolean,
+        value: false
+      },
+
+      imageSimilaritySearchThreshold: {
+        type: Number,
+        value: 0.3
+      },
+
+      logger: {
+        type: Object
+      },
+
+      logMessage: {
+        type: Object
+      },
+
+      menuOpened: {
+        type: Boolean
+      },
+
+      networkExpansionParameters: {
+        type: Object
+      },
+
+      notifications: {
+        type: Boolean
+      },
+
+      notificationInterval: {
+        type: String
+      },
+
+      openedDatabaseDetail: {
+        type: Boolean
+      },
+
+      pageWasNotJustOpened: {
+        computed:
+          'computePageWasNotJustOpened(searchParameters, searchParameters.*)',
+        type: Boolean,
+        value: false
+      },
+
+      parameters: {
+        computed: 'getUrlParameters()',
+        type: Object
+      },
+
+      prettyDomain: {
+        computed: 'findPrettyDomain(domain, serverConfig)',
+        notify: true,
+        type: String
+      },
+
+      processRequest: {
+        type: Boolean
+      },
+
+      profileManager: {
+        type: Object
+      },
+
+      searchError: {
+        type: Object
+      },
+
+      searchErrorMessage: {
+        type: String
+      },
+
+      searchFields: {
+        type: Array
+      },
+
+      searchFieldsDialogCallbacks: {
+        type: Object
+      },
+
+      searchFieldsDialogConfig: {
+        type: Object
+      },
+
+      searchKeys: {
+        type: Array
+      },
+
+      searchLoading: {
+        notify: true,
+        type: Boolean,
+        value: false
+      },
+
+      searchPage: {
+        type: Number
+      },
+
+      searchParameters: {
+        type: Object
+      },
+
+      searchQuery: {
+        type: Object
+      },
+
+      searchQueryTransformerResults: {
+        type: Object
+      },
+
+      searchResults: {
+        type: Array
+      },
+
+      searchResultsShown: {
+        type: Array
+      },
+
+      searchTitle: {
+        type: String
+      },
+
+      searchTotal: {
+        type: Number
+      },
+
+      serverConfig: {
+        type: Object
+      },
+
+      sortedSearchFields: {
+        type: Array
+      },
+
+      sortKey: {
+        type: String,
+        value: ''
+      },
+
+      sortOrder: {
+        type: String,
+        value: 'desc'
+      },
+
+      stateHistory: {
+        type: Array
+      },
+
+      tagManager: {
+        type: Object
+      },
+
+      timelineAggregation: {
+        type: Object,
+        value: function() {
+          return {};
+        }
+      },
+
+      timelineError: {
+        type: Object,
+        value: function() {
+          return {};
+        }
+      },
+
+      timelineLoading: {
+        type: Object,
+        value: function() {
+          return {};
+        }
+      },
+
+      timelineResults: {
+        type: Object,
+        value: function() {
+          return {};
+        }
+      },
+
+      transforms: {
+        type: Object
+      },
+
+      userId: {
+        type: String
+      },
+
+      userLoading: {
+        type: Boolean,
+        value: false
+      },
+
+      userSettingsDialogCallbacks: {
+        type: Object
+      }
+    },
+
+    observers: [
+      'resetTimelineResults(searchParameters, searchParameters.*)',
+      'runBothImageSearches(imagesUploaded)'
+    ],
+
+    attached: function() {
+      this.assignWindowProperties(this);
+    },
+
+    /************* PAGE *************/
+    buildSearchState: function(config, oldConfig) {
+      var state = {};
+      _.keys(oldConfig).forEach(function(key) {
+        state[key] = config[key] || {};
+      });
+      return state;
+    },
+
+    computePageWasNotJustOpened: function() {
+      return (
+        this.pageWasNotJustOpened ||
+        !this.searchParametersDisabled(this.searchParameters)
+      );
+    },
+
+    createSearchResultConfig: function(networkExpansionParameters) {
+      return {
+        isNetworkExpansion: !!_.findKey(networkExpansionParameters, function(
+          key
+        ) {
+          return key;
+        })
+      };
+    },
+
+    createHistogramAggregationConfig: function(
+      interval,
+      dateFieldsToProperties,
+      dateSelected,
+      searchParameters
+    ) {
+      var config = {
+        interval: interval,
+        name: this.createHistogramAggregationName(
+          dateFieldsToProperties,
+          dateSelected
+        ),
+        unidentified: this.serverConfig.resultNamePlural
+      };
+
+      if (searchParameters) {
+        _.keys(dateFieldsToProperties).forEach(function(dateId) {
+          if (dateId === dateSelected) {
+            var dateObject = dateFieldsToProperties[dateId];
+            var searchObject = searchParameters[dateObject.key];
+            config.begin = searchObject[dateObject.start]
+              ? searchObject[dateObject.start].date
+              : undefined;
+            config.end = searchObject[dateObject.end]
+              ? searchObject[dateObject.end].date
+              : undefined;
           }
-          return networkExpansionFields;
-        }, []);
-      },
-
-      getDrawerToggleIcon: function(drawerOpened) {
-        return drawerOpened ? 'icons:visibility-off' : 'icons:visibility';
-      },
-
-      getDrawerToggleText: function(drawerOpened) {
-        return drawerOpened ? 'Showing Facets (Click to Close)' : 'Hiding Facets (Click to Open)';
-      },
-
-      getMenuVerticalOffset: function(notBig) {
-        return notBig ? 50 : 70;
-      },
-
-      getNavbarStyleClass: function(notBig) {
-        return notBig ? '' : 'bigger';
-      },
-
-      handleImageFaceSearchResults: function(event) {
-        if(event.detail.error || event.detail.response.error) {
-          while(this.imageFaceSearchList.length && this.imageFaceSearchList[0].face) {
-            var inputImage = this.imageFaceSearchList.shift();
-            this.handleImageResults('Face', inputImage, [], [], [], this.imageFaceSearchThreshold, (event.detail.error || event.detail.response.error));
-          }
-        }
-
-        /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-        var response = (event.detail.response || {}).AllSimilarFaces || [];
-        /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
-        if(response && response.length) {
-          var self = this;
-          response.forEach(function(imageResults) {
-            /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-            var imageUrls = imageResults.SimilarFaces.CachedImageURLs;
-            var imageIds = imageResults.SimilarFaces.ImageSha1s;
-            var imageDistances = imageResults.SimilarFaces.Distances;
-            /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
-
-            var inputImage = self.imageFaceSearchList.shift();
-            self.handleImageResults('Face', inputImage, imageUrls, imageIds, imageDistances, self.imageFaceSearchThreshold);
-          });
-        }
-
-        this.runImageFaceSearch();
-      },
-
-      handleImageSimilaritySearchResults: function(event) {
-        if(event.detail.error || event.detail.response.error) {
-          while(this.imageSimilaritySearchList.length && this.imageSimilaritySearchList[0].similarity) {
-            var inputImage = this.imageSimilaritySearchList.shift();
-            this.handleImageResults('Similarity', inputImage, [], [], [], this.imageSimilaritySearchThreshold, (event.detail.error || event.detail.response.error));
-          }
-        }
-
-        var response = (event.detail.response || {}).images || [];
-        if(response && response.length) {
-          var self = this;
-          response.forEach(function(imageResults) {
-            /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-            var imageUrls = imageResults.similar_images.cached_image_urls;
-            var imageIds = imageResults.similar_images.sha1;
-            var imageDistances = imageResults.similar_images.distance;
-            /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
-
-            var inputImage = self.imageSimilaritySearchList.shift();
-            self.handleImageResults('Similarity', inputImage, imageUrls, imageIds, imageDistances, self.imageSimilaritySearchThreshold);
-          });
-        }
-
-        this.runImageSimilaritySearch();
-      },
-
-      handleImageResults: function(searchType, inputImage, imageUrls, imageIds, imageDistances, imageThreshold, error) {
-        var imageIndex = _.findIndex(this.imagesUploaded, function(object) {
-          return object.id === inputImage.id;
         });
+      }
 
-        if(imageIndex < 0) {
-          return;
+      return config;
+    },
+
+    createHistogramAggregationName: function(
+      dateFieldsToProperties,
+      dateSelected
+    ) {
+      var dateId = _.find(_.keys(dateFieldsToProperties), function(dateId) {
+        return dateId === dateSelected;
+      });
+      return dateId
+        ? dateFieldsToProperties[dateId].key + '_timeline'
+        : undefined;
+    },
+
+    createTotalCountFunction: function() {
+      return function(response) {
+        if (response && response.length && response[0] && response[0].result) {
+          if (_.isArray(response[0].result)) {
+            return response[0].result.length &&
+              response[0].result[1].hits &&
+              response[0].result[1].hits.total
+              ? response[0].result[1].hits.total
+              : 0;
+          }
+          return response[0].result.hits && response[0].result.hits.total
+            ? response[0].result.hits.total
+            : 0;
         }
+        return 0;
+      };
+    },
 
-        var linkFunction = this.transforms && this.transforms.entity ? this.transforms.entity.entityPageLinkForImageId : null;
-
-        // Remove images with distances over the threshold.
-        var sliceIndex = _.findIndex(imageDistances, function(distance) {
-          return _.toNumber(distance) > imageThreshold;
+    findImagesFromResults: function(searchResults) {
+      var ids = {};
+      var images = [];
+      searchResults.forEach(function(result) {
+        (result.images || []).forEach(function(image) {
+          if (!ids[image.id]) {
+            images.push(image);
+            ids[image.id] = true;
+          }
         });
+      });
+      return images;
+    },
 
-        var previousImageResults = this.imagesUploaded[imageIndex].hits || [];
-        var imageResults = imageIds.map(function(id, index) {
+    /**
+     * Returns the list of active fields in the given network expansion parameters.
+     *
+     * @param {Object} networkExpansionParameters
+     * @param {Array} searchFields
+     * @return {Array}
+     * @private
+     */
+    getNetworkExpansionFields: function(
+      networkExpansionParameters,
+      searchFields
+    ) {
+      if (!networkExpansionParameters) {
+        return [];
+      }
+
+      return searchFields.reduce(function(
+        networkExpansionFields,
+        searchFieldsObject
+      ) {
+        if (networkExpansionParameters[searchFieldsObject.key]) {
+          networkExpansionFields.push(searchFieldsObject.title);
+        }
+        return networkExpansionFields;
+      },
+      []);
+    },
+
+    getDrawerToggleIcon: function(drawerOpened) {
+      return drawerOpened ? 'icons:visibility-off' : 'icons:visibility';
+    },
+
+    getDrawerToggleText: function(drawerOpened) {
+      return drawerOpened
+        ? 'Showing Facets (Click to Close)'
+        : 'Hiding Facets (Click to Open)';
+    },
+
+    getMenuVerticalOffset: function(notBig) {
+      return notBig ? 50 : 70;
+    },
+
+    getNavbarStyleClass: function(notBig) {
+      return notBig ? '' : 'bigger';
+    },
+
+    handleImageFaceSearchResults: function(event) {
+      if (event.detail.error || event.detail.response.error) {
+        while (
+          this.imageFaceSearchList.length &&
+          this.imageFaceSearchList[0].face
+        ) {
+          var inputImage = this.imageFaceSearchList.shift();
+          this.handleImageResults(
+            'Face',
+            inputImage,
+            [],
+            [],
+            [],
+            this.imageFaceSearchThreshold,
+            event.detail.error || event.detail.response.error
+          );
+        }
+      }
+
+      /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+      var response = (event.detail.response || {}).AllSimilarFaces || [];
+      /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+      if (response && response.length) {
+        var self = this;
+        response.forEach(function(imageResults) {
+          /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+          var imageUrls = imageResults.SimilarFaces.CachedImageURLs;
+          var imageIds = imageResults.SimilarFaces.ImageSha1s;
+          var imageDistances = imageResults.SimilarFaces.Distances;
+          /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+
+          var inputImage = self.imageFaceSearchList.shift();
+          self.handleImageResults(
+            'Face',
+            inputImage,
+            imageUrls,
+            imageIds,
+            imageDistances,
+            self.imageFaceSearchThreshold
+          );
+        });
+      }
+
+      this.runImageFaceSearch();
+    },
+
+    handleImageSimilaritySearchResults: function(event) {
+      if (event.detail.error || event.detail.response.error) {
+        while (
+          this.imageSimilaritySearchList.length &&
+          this.imageSimilaritySearchList[0].similarity
+        ) {
+          var inputImage = this.imageSimilaritySearchList.shift();
+          this.handleImageResults(
+            'Similarity',
+            inputImage,
+            [],
+            [],
+            [],
+            this.imageSimilaritySearchThreshold,
+            event.detail.error || event.detail.response.error
+          );
+        }
+      }
+
+      var response = (event.detail.response || {}).images || [];
+      if (response && response.length) {
+        var self = this;
+        response.forEach(function(imageResults) {
+          /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+          var imageUrls = imageResults.similar_images.cached_image_urls;
+          var imageIds = imageResults.similar_images.sha1;
+          var imageDistances = imageResults.similar_images.distance;
+          /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+
+          var inputImage = self.imageSimilaritySearchList.shift();
+          self.handleImageResults(
+            'Similarity',
+            inputImage,
+            imageUrls,
+            imageIds,
+            imageDistances,
+            self.imageSimilaritySearchThreshold
+          );
+        });
+      }
+
+      this.runImageSimilaritySearch();
+    },
+
+    handleImageResults: function(
+      searchType,
+      inputImage,
+      imageUrls,
+      imageIds,
+      imageDistances,
+      imageThreshold,
+      error
+    ) {
+      var imageIndex = _.findIndex(this.imagesUploaded, function(object) {
+        return object.id === inputImage.id;
+      });
+
+      if (imageIndex < 0) {
+        return;
+      }
+
+      var linkFunction =
+        this.transforms && this.transforms.entity
+          ? this.transforms.entity.entityPageLinkForImageId
+          : null;
+
+      // Remove images with distances over the threshold.
+      var sliceIndex = _.findIndex(imageDistances, function(distance) {
+        return _.toNumber(distance) > imageThreshold;
+      });
+
+      var previousImageResults = this.imagesUploaded[imageIndex].hits || [];
+      var imageResults = imageIds
+        .map(function(id, index) {
           return {
             id: id,
-            link: (linkFunction ? linkFunction(id) : ''),
+            link: linkFunction ? linkFunction(id) : '',
             rank: imageDistances[index],
             source: imageUrls[index]
           };
-        }).slice(0, sliceIndex < 0 ? imageIds.length : sliceIndex);
+        })
+        .slice(0, sliceIndex < 0 ? imageIds.length : sliceIndex);
 
-        // Mark one search as done.
-        this.imagesUploaded[imageIndex].searches = this.imagesUploaded[imageIndex].searches - 1;
-        if(!this.imagesUploaded[imageIndex].searches) {
-          this.set('imagesProcessing', this.imagesProcessing.map(function(id) {
-            return id;
-          }).filter(function(id) {
-            return id !== inputImage.id;
-          }));
-        }
-
-        var allResults = (!previousImageResults.length ? imageResults : _.uniqBy(previousImageResults.concat(imageResults).sort(function(a, b) {
-          return a.rank - b.rank;
-        }), 'id')).map(function(result, index) {
-          result.name = 'Match #' + (index + 1) + ' (' + inputImage.id + ')';
-          return result;
-        });
-
-        this.set(['imagesUploaded', imageIndex, 'hits'], allResults);
-
-        if(error && this.logger) {
-          this.logger.log('ImageSearch' + searchType + '-Error', '{"type":"' + inputImage.type + '","name":"' + inputImage.id + '"}');
-        }
-      },
-
-      /**
-       * Returns a logical OR of the arguments.
-       *
-       * @return {Boolean}
-       */
-      logicalOr: function() {
-        var result = false;
-        _.each(arguments, function(argument) {
-          result = result || argument;
-        });
-        return !!result;
-      },
-
-      openBulkSearchDialog: function() {
-        this.$$('#menuDropdown').close();
-        this.$$('#bulkSearchDialog').open();
-      },
-
-      openDatabaseDetail: function() {
-        this.$$('#menuDropdown').close();
-        this.$$('#databaseDetailDialog').open();
-      },
-
-      openSearchImageGallery: function() {
-        this.$$('#menuDropdown').close();
-        this.$$('#searchImageGalleryDialog').open();
-      },
-
-      /**
-       * Resets all the timeline results.
-       */
-      resetTimelineResults: function() {
-        this.set('processRequest', false);
-        this.set('timelineResults', {});
-        this.set('esQueryWithoutDates', null);
-        this.set('processRequest', true);
-      },
-
-      runBothImageSearches: function() {
-        if(!this.imagesUploaded.length) {
-          return;
-        }
-
-        // Find all of the new images using their names as unique identifiers.
-        var self = this;
-        var images = this.imagesUploaded.filter(function(object) {
-          var search = _.isUndefined(object.hits);
-          object.hits = object.hits || null;
-          object.searches = object.searches >= 0 ? object.searches : 2;
-          return search;
-        });
-
-        self.set('imagesProcessing', this.imagesProcessing.concat(images.map(function(object) {
-          return object.id;
-        })));
-
-        // Use the map function to create new arrays (same objects though).
-        this.set('imageFaceSearchList', this.imageFaceSearchList.concat(images.map(function(object) {
-          return object;
-        })));
-        this.set('imageSimilaritySearchList', this.imageSimilaritySearchList.concat(images.map(function(object) {
-          return object;
-        })));
-
-        // Run the face and similarity searches simultaneously.
-        if(!this.imageFaceSearchRunning) {
-          this.runImageFaceSearch();
-        }
-        if(!this.imageSimilaritySearchRunning) {
-          this.runImageSimilaritySearch();
-        }
-      },
-
-      runImageFaceSearch: function() {
-        if(!this.imageFaceSearchList.length) {
-          this.imageFaceSearchRunning = false;
-          return;
-        }
-
-        this.imageFaceSearchRunning = true;
-        this.sendImageSearchRequest('Face', 'imageFaceSearch', this.imageFaceSearchList, this.imageFaceSearchThreshold);
-      },
-
-      runImageSimilaritySearch: function() {
-        if(!this.imageSimilaritySearchList.length) {
-          this.imageSimilaritySearchRunning = false;
-          return;
-        }
-
-        this.imageSimilaritySearchRunning = true;
-        this.sendImageSearchRequest('Similarity', 'imageSimilaritySearch', this.imageSimilaritySearchList, this.imageSimilaritySearchThreshold);
-      },
-
-      /**
-       * Returns whether all the terms in the given search parameters object are disabled.
-       *
-       * @param {Object} searchParameters
-       * @return {Boolean}
-       */
-      searchParametersDisabled: function(searchParameters) {
-        return _.keys(searchParameters).every(function(type) {
-          return _.keys(searchParameters[type]).every(function(term) {
-            return !searchParameters[type][term].enabled;
-          });
-        });
-      },
-
-      sendImageSearchRequest: function(searchType, searchName, searchList, imageThreshold) {
-        // Run in batches of 5.  All 5 must be either links or uploaded files.
-        var dataType = searchList[0].type;
-        var objectList = searchList.filter(function(object) {
-          return object.type === dataType;
-        }).slice(0, 5);
-        var sourceList = objectList.map(function(object) {
-          // Set the 'face' or 'similarity' property to 'true' for the objects in the search.
-          object[searchType.toLowerCase()] = true;
-          if(dataType === 'DATA') {
-            return object.source.substring(object.source.indexOf(';base64,') + 8);
-          }
-          return object.source;
-        });
-
-        var authConfig = (this.serverConfig.imageServiceConfig.auth || {});
-        var auth = authConfig.user && authConfig.password ? 'Basic ' + btoa(authConfig.user + ':' + authConfig.password) : '';
-        var endpointConfig = (this.serverConfig.imageServiceConfig.endpoint || {});
-        var endpoint = endpointConfig[dataType.toLowerCase()];
-        var hostConfig = (this.serverConfig.imageServiceConfig.host || {});
-        var host = hostConfig[searchType.toLowerCase()];
-
-        if(this.logger) {
-          var logMessage = '["' + objectList.map(function(object) {
-            return object.id;
-          }).join('","') + '"]';
-          this.logger.log('ImageSearch' + searchType + '-Start', logMessage);
-        }
-
-        if(auth && endpoint && host) {
-          var requestElement = this.$$('#' + searchName);
-          requestElement.body = {
-            data: sourceList.join(',')
-          };
-          requestElement.body.options = '{' + '"max_returned":1000,"near_dup":1,"near_dup_th":' + imageThreshold + '}';
-          requestElement.url = host + endpoint;
-          requestElement.headers = requestElement.headers || {};
-          requestElement.headers.Authorization = auth;
-          requestElement.generateRequest();
-        }
-      },
-
-      /**
-       * Returns whether to reduce the interval for the given results.
-       *
-       * @param {Object} results
-       * @return {Boolean}
-       */
-      shouldReduceInterval: function(results) {
-        if(!results || !results.histogram.length) {
-          return false;
-        }
-        return results.histogram.length <= 60;
-      },
-
-      /**
-       * Returns whether to show the bar chart for the given results.
-       *
-       * @param {Object} requiredResults
-       * @param {Object} overrideResults
-       * @return {Boolean}
-       */
-      shouldShowBarChart: function(requiredResults, overrideResults) {
-        if(!requiredResults || !requiredResults.histogram.length || (overrideResults && overrideResults.histogram.length)) {
-          return false;
-        }
-        return requiredResults.histogram.length > 1;
-      },
-
-      toggleDrawer: function() {
-        this.drawerOpened = !this.drawerOpened;
-        this.$$('#pageDrawer').togglePanel();
-      },
-
-      validateImageServiceConfig: function(config) {
-        return !!(config && config.auth && config.auth.user && config.auth.password && config.endpoint && config.endpoint.data && config.endpoint.link && config.host && config.host.face && config.host.similarity);
-      },
-
-      _toggleSearchDialog: function() {
-        this.searchFieldsDialogCallbacks.toggleDialog();
+      // Mark one search as done.
+      this.imagesUploaded[imageIndex].searches =
+        this.imagesUploaded[imageIndex].searches - 1;
+      if (!this.imagesUploaded[imageIndex].searches) {
+        this.set(
+          'imagesProcessing',
+          this.imagesProcessing
+            .map(function(id) {
+              return id;
+            })
+            .filter(function(id) {
+              return id !== inputImage.id;
+            })
+        );
       }
-    });
-  })();
-  </script>
+
+      var allResults = (!previousImageResults.length
+        ? imageResults
+        : _.uniqBy(
+            previousImageResults.concat(imageResults).sort(function(a, b) {
+              return a.rank - b.rank;
+            }),
+            'id'
+          )
+      ).map(function(result, index) {
+        result.name = 'Match #' + (index + 1) + ' (' + inputImage.id + ')';
+        return result;
+      });
+
+      this.set(['imagesUploaded', imageIndex, 'hits'], allResults);
+
+      if (error && this.logger) {
+        this.logger.log(
+          'ImageSearch' + searchType + '-Error',
+          '{"type":"' + inputImage.type + '","name":"' + inputImage.id + '"}'
+        );
+      }
+    },
+
+    /**
+     * Returns a logical OR of the arguments.
+     *
+     * @return {Boolean}
+     */
+    logicalOr: function() {
+      var result = false;
+      _.each(arguments, function(argument) {
+        result = result || argument;
+      });
+      return !!result;
+    },
+
+    openBulkSearchDialog: function() {
+      this.$$('#menuDropdown').close();
+      this.$$('#bulkSearchDialog').open();
+    },
+
+    openDatabaseDetail: function() {
+      this.$$('#menuDropdown').close();
+      this.$$('#databaseDetailDialog').open();
+    },
+
+    openSearchImageGallery: function() {
+      this.$$('#menuDropdown').close();
+      this.$$('#searchImageGalleryDialog').open();
+    },
+
+    /**
+     * Resets all the timeline results.
+     */
+    resetTimelineResults: function() {
+      this.set('processRequest', false);
+      this.set('timelineResults', {});
+      this.set('esQueryWithoutDates', null);
+      this.set('processRequest', true);
+    },
+
+    runBothImageSearches: function() {
+      if (!this.imagesUploaded.length) {
+        return;
+      }
+
+      // Find all of the new images using their names as unique identifiers.
+      var self = this;
+      var images = this.imagesUploaded.filter(function(object) {
+        var search = _.isUndefined(object.hits);
+        object.hits = object.hits || null;
+        object.searches = object.searches >= 0 ? object.searches : 2;
+        return search;
+      });
+
+      self.set(
+        'imagesProcessing',
+        this.imagesProcessing.concat(
+          images.map(function(object) {
+            return object.id;
+          })
+        )
+      );
+
+      // Use the map function to create new arrays (same objects though).
+      this.set(
+        'imageFaceSearchList',
+        this.imageFaceSearchList.concat(
+          images.map(function(object) {
+            return object;
+          })
+        )
+      );
+      this.set(
+        'imageSimilaritySearchList',
+        this.imageSimilaritySearchList.concat(
+          images.map(function(object) {
+            return object;
+          })
+        )
+      );
+
+      // Run the face and similarity searches simultaneously.
+      if (!this.imageFaceSearchRunning) {
+        this.runImageFaceSearch();
+      }
+      if (!this.imageSimilaritySearchRunning) {
+        this.runImageSimilaritySearch();
+      }
+    },
+
+    runImageFaceSearch: function() {
+      if (!this.imageFaceSearchList.length) {
+        this.imageFaceSearchRunning = false;
+        return;
+      }
+
+      this.imageFaceSearchRunning = true;
+      this.sendImageSearchRequest(
+        'Face',
+        'imageFaceSearch',
+        this.imageFaceSearchList,
+        this.imageFaceSearchThreshold
+      );
+    },
+
+    runImageSimilaritySearch: function() {
+      if (!this.imageSimilaritySearchList.length) {
+        this.imageSimilaritySearchRunning = false;
+        return;
+      }
+
+      this.imageSimilaritySearchRunning = true;
+      this.sendImageSearchRequest(
+        'Similarity',
+        'imageSimilaritySearch',
+        this.imageSimilaritySearchList,
+        this.imageSimilaritySearchThreshold
+      );
+    },
+
+    /**
+     * Returns whether all the terms in the given search parameters object are disabled.
+     *
+     * @param {Object} searchParameters
+     * @return {Boolean}
+     */
+    searchParametersDisabled: function(searchParameters) {
+      return _.keys(searchParameters).every(function(type) {
+        return _.keys(searchParameters[type]).every(function(term) {
+          return !searchParameters[type][term].enabled;
+        });
+      });
+    },
+
+    sendImageSearchRequest: function(
+      searchType,
+      searchName,
+      searchList,
+      imageThreshold
+    ) {
+      // Run in batches of 5.  All 5 must be either links or uploaded files.
+      var dataType = searchList[0].type;
+      var objectList = searchList
+        .filter(function(object) {
+          return object.type === dataType;
+        })
+        .slice(0, 5);
+      var sourceList = objectList.map(function(object) {
+        // Set the 'face' or 'similarity' property to 'true' for the objects in the search.
+        object[searchType.toLowerCase()] = true;
+        if (dataType === 'DATA') {
+          return object.source.substring(object.source.indexOf(';base64,') + 8);
+        }
+        return object.source;
+      });
+
+      var authConfig = this.serverConfig.imageServiceConfig.auth || {};
+      var auth =
+        authConfig.user && authConfig.password
+          ? 'Basic ' + btoa(authConfig.user + ':' + authConfig.password)
+          : '';
+      var endpointConfig = this.serverConfig.imageServiceConfig.endpoint || {};
+      var endpoint = endpointConfig[dataType.toLowerCase()];
+      var hostConfig = this.serverConfig.imageServiceConfig.host || {};
+      var host = hostConfig[searchType.toLowerCase()];
+
+      if (this.logger) {
+        var logMessage =
+          '["' +
+          objectList
+            .map(function(object) {
+              return object.id;
+            })
+            .join('","') +
+          '"]';
+        this.logger.log('ImageSearch' + searchType + '-Start', logMessage);
+      }
+
+      if (auth && endpoint && host) {
+        var requestElement = this.$$('#' + searchName);
+        requestElement.body = {
+          data: sourceList.join(',')
+        };
+        requestElement.body.options =
+          '{' +
+          '"max_returned":1000,"near_dup":1,"near_dup_th":' +
+          imageThreshold +
+          '}';
+        requestElement.url = host + endpoint;
+        requestElement.headers = requestElement.headers || {};
+        requestElement.headers.Authorization = auth;
+        requestElement.generateRequest();
+      }
+    },
+
+    /**
+     * Returns whether to reduce the interval for the given results.
+     *
+     * @param {Object} results
+     * @return {Boolean}
+     */
+    shouldReduceInterval: function(results) {
+      if (!results || !results.histogram.length) {
+        return false;
+      }
+      return results.histogram.length <= 60;
+    },
+
+    /**
+     * Returns whether to show the bar chart for the given results.
+     *
+     * @param {Object} requiredResults
+     * @param {Object} overrideResults
+     * @return {Boolean}
+     */
+    shouldShowBarChart: function(requiredResults, overrideResults) {
+      if (
+        !requiredResults ||
+        !requiredResults.histogram.length ||
+        (overrideResults && overrideResults.histogram.length)
+      ) {
+        return false;
+      }
+      return requiredResults.histogram.length > 1;
+    },
+
+    toggleDrawer: function() {
+      this.drawerOpened = !this.drawerOpened;
+      this.$$('#pageDrawer').togglePanel();
+    },
+
+    validateImageServiceConfig: function(config) {
+      return !!(
+        config &&
+        config.auth &&
+        config.auth.user &&
+        config.auth.password &&
+        config.endpoint &&
+        config.endpoint.data &&
+        config.endpoint.link &&
+        config.host &&
+        config.host.face &&
+        config.host.similarity
+      );
+    },
+
+    _toggleSearchDialog: function() {
+      this.searchFieldsDialogCallbacks.toggleDialog();
+    }
+  });
+})();
+</script>
 </dom-module>
