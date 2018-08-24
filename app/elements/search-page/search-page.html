@@ -121,14 +121,20 @@ limitations under the License.
 
       #pageSearch {
         --paper-header-panel-container: {
-          background-color: white;
+          background-color: var(--paper-grey-100);
         };
       }
 
-      #searchHeader,
+      #searchHeader {
+        margin-left: 4.5em;
+        margin-right: 5.5em
+      }
+
       #searchTimeline {
         background-color: var(--paper-grey-100);
         padding: 10px;
+        margin-left: 4.5em;
+        margin-right: 5.5em;
         /* Fix box-shadow. */
         position: relative;
         z-index: 3;
