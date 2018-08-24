@@ -943,10 +943,10 @@ limitations under the License.
 
           <template is="dom-if" if="[[esConfig]]">
             <template is="dom-if" if="[[pageWasNotJustOpened]]">
-              <paper-material slot="header" id="searchHeader" class="layout horizontal center" elevation="2">
+              <paper-material slot="header" id="searchHeader" class="layout horizontal center" elevation="0">
                 <div class="search-header-text flex">
                   <template is="dom-if" if="[[!searchError]]">
-                    [[searchTitle]]
+                    <div id="searchTitle_container">{{searchTitle}}</div>
                   </template>
 
                   <template is="dom-if" if="[[searchError]]">
@@ -992,17 +992,12 @@ limitations under the License.
               </paper-material>
             </template>
 
-            <app-header-layout>
-              <app-header
-                 condenses="true"
-                 reveals="true"
-                 effects="fade-background waterfall"
-              >
+            <!-- <app-header-layout> -->
+              <!-- <app-header condenses="true" reveals="true" effects="fade-background waterfall"> -->
                 <template is="dom-if" if="[[!esConfig.hideTimelines]]">
                   <!-- [[!esConfig.hideTimelines]] -->
                   <template is="dom-if" if="[[shouldShowBarChart(timelineResults.hour)]]">
-                    <!-- [[shouldShowBarChart(timelineResults.hour)]] -->
-                    <paper-material id="searchTimeline" class="layout vertical" elevation="2">
+                    <paper-material id="searchTimeline" class="layout vertical" elevation="0">
                       <zoomable-bar-chart
                         bar-property="date"
                         data="[[timelineResults.hour.histogram]]"
@@ -1101,7 +1096,7 @@ limitations under the License.
                     </paper-material>
                   </template>
                 </template>
-              </app-header>
+              <!-- </app-header> -->
 
               <template is="dom-if" if="[[!serverConfig.hideDatabaseInfo]]">
                 <template is="dom-if" if="[[!pageWasNotJustOpened]]">
@@ -1151,7 +1146,7 @@ limitations under the License.
                 hide-confidences
                 tag-manager="[[tagManager]]">
               </result-list>
-            </app-header-layout>
+            <!-- </app-header-layout> -->
 
           </template>
         </paper-header-panel>
@@ -1418,6 +1413,12 @@ limitations under the License.
         type: Number
       },
 
+      test: {
+        type: Number,
+        value: 1
+        // observer: 'testbinding'
+      },
+
       searchParameters: {
         type: Object
       },
@@ -1439,7 +1440,10 @@ limitations under the License.
       },
 
       searchTitle: {
-        type: String
+        // notify: true,
+        // readOnly: false,
+        type: String,
+        value: 'default'
       },
 
       searchTotal: {
@@ -1528,6 +1532,7 @@ limitations under the License.
     },
 
     /************* PAGE *************/
+
     buildSearchState: function(config, oldConfig) {
       var state = {};
       _.keys(oldConfig).forEach(function(key) {
@@ -2058,6 +2063,7 @@ limitations under the License.
      * @return {Boolean}
      */
     shouldShowBarChart: function(requiredResults, overrideResults) {
+      console.log('shouldShowBarChart', requiredResults, overrideResults);
       if (
         !requiredResults ||
         !requiredResults.histogram.length ||

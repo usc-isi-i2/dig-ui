@@ -320,12 +320,14 @@ var searchTransforms = function(_, esConfig) {
 
         var groupBy =
           !config || !config.page || !config.pageSize
-            ? {}
+            ? {
+                limit: 10,
+                offset: 0
+              }
             : {
                 limit: config.pageSize,
                 offset: (config.page - 1) * config.pageSize
               };
-        console.log('groupBy', groupBy);
 
         var orderBy;
         if (config.sortKey && config.sortOrder) {
