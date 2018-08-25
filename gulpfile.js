@@ -374,14 +374,14 @@ gulp.task(
   'docker',
   ['default'],
   $.shell.task([
-    'echo "Building docker container for digmemex/digui version ' +
+    'echo "Building docker container for uscisii2/digui version ' +
       version +
       '"',
-    'docker build -t digmemex/digui:' + version + ' .',
-    'echo "Pushing docker container for digmemex/digui version ' +
+    'docker build -t uscisii2/digui:' + version + ' .',
+    'echo "Pushing docker container for uscisii2/digui version ' +
       version +
       '"',
-    'docker push digmemex/digui:' + version
+    'docker push uscisii2/digui:' + version
   ])
 );
 
@@ -389,10 +389,10 @@ gulp.task(
   'docker-dev',
   ['default'],
   $.shell.task([
-    'echo "Building docker container for digmemex/digui version ' +
+    'echo "Building docker container for uscisii2/digui version ' +
       version +
       '"',
-    'docker build -t digmemex/digui:' + version + ' .'
+    'docker build -t uscisii2/digui:' + version + ' .'
   ])
 );
 
