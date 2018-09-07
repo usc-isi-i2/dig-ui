@@ -1,7 +1,8 @@
 {
   "name": "dig-ui",
-  "version": "3.4.4",
-  "description": "Customizable DIG search and visualization interface for any domain",
+  "version": "3.4.5",
+  "description":
+    "Customizable DIG search and visualization interface for any domain",
   "license": "Apache-2.0",
   "author": "Next Century Corporation",
   "main": "server/app.js",
