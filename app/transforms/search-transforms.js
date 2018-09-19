@@ -29,8 +29,8 @@ var searchTransforms = function(_, esConfig) {
         : [
             {
               clauses: [],
-              type: 'Ad',
-              variable: '?ad1'
+              type: "Ad",
+              variable: "?ad1"
             }
           ],
       filters: []
@@ -42,18 +42,18 @@ var searchTransforms = function(_, esConfig) {
 
     var andFilter = {
       clauses: [],
-      operator: 'and'
+      operator: "and"
     };
 
     var notFilter = {
       clauses: [],
-      operator: 'not exists'
+      operator: "not exists"
     };
 
     _.keys(searchParameters).forEach(function(type) {
       var unionClause = {
         clauses: [],
-        operator: 'union'
+        operator: "union"
       };
 
       var createVariable = true;
@@ -67,9 +67,9 @@ var searchTransforms = function(_, esConfig) {
             date.setUTCHours(0);
 
             andFilter.clauses.push({
-              constraint: date.toISOString().split('.')[0],
-              operator: term.includes('start') ? '>=' : '<=',
-              variable: '?' + type + '_filter'
+              constraint: date.toISOString().split(".")[0],
+              operator: term.includes("start") ? ">=" : "<=",
+              variable: "?" + type + "_filter"
             });
 
             // Only create one date variable per date type.
@@ -79,7 +79,7 @@ var searchTransforms = function(_, esConfig) {
               template.clauses.push({
                 isOptional: false,
                 predicate: type,
-                variable: '?' + type + '_filter'
+                variable: "?" + type + "_filter"
               });
 
               // If network expansion is enabled for any type...
@@ -87,19 +87,19 @@ var searchTransforms = function(_, esConfig) {
                 template.clauses[0].clauses.push({
                   isOptional: false,
                   predicate: type,
-                  variable: '?' + type + '_filter'
+                  variable: "?" + type + "_filter"
                 });
               }
             }
           } else if (
-            searchParameters[type][term].search === 'lessthan' ||
-            searchParameters[type][term].search === 'morethan'
+            searchParameters[type][term].search === "lessthan" ||
+            searchParameters[type][term].search === "morethan"
           ) {
             andFilter.clauses.push({
               constraint: searchParameters[type][term].key,
               operator:
-                searchParameters[type][term].search === 'lessthan' ? '<' : '>',
-              variable: '?' + type + '_filter'
+                searchParameters[type][term].search === "lessthan" ? "<" : ">",
+              variable: "?" + type + "_filter"
             });
 
             // Only create one number variable per number type.
@@ -109,7 +109,7 @@ var searchTransforms = function(_, esConfig) {
               template.clauses.push({
                 isOptional: false,
                 predicate: type,
-                variable: '?' + type + '_filter'
+                variable: "?" + type + "_filter"
               });
 
               // If network expansion is enabled for any type...
@@ -117,23 +117,23 @@ var searchTransforms = function(_, esConfig) {
                 template.clauses[0].clauses.push({
                   isOptional: false,
                   predicate: type,
-                  variable: '?' + type + '_filter'
+                  variable: "?" + type + "_filter"
                 });
               }
             }
-          } else if (searchParameters[type][term].search === 'excluded') {
+          } else if (searchParameters[type][term].search === "excluded") {
             notFilter.clauses.push({
               constraint: searchParameters[type][term].key,
               predicate: type
             });
-          } else if (searchParameters[type][term].search === 'union') {
+          } else if (searchParameters[type][term].search === "union") {
             unionClause.clauses.push({
               constraint: searchParameters[type][term].key,
               isOptional: false,
               predicate: type
             });
           } else {
-            var optional = searchParameters[type][term].search !== 'required';
+            var optional = searchParameters[type][term].search !== "required";
 
             template.clauses.push({
               constraint: searchParameters[type][term].key,
@@ -169,7 +169,7 @@ var searchTransforms = function(_, esConfig) {
           template.clauses[0].clauses.push({
             clauses: unionClause.clauses,
             isOptional: true,
-            operator: 'union'
+            operator: "union"
           });
         }
       }
@@ -177,7 +177,7 @@ var searchTransforms = function(_, esConfig) {
 
     var unionNetworkExpansion = {
       clauses: [],
-      operator: 'union'
+      operator: "union"
     };
 
     _.keys(networkExpansionParameters || {}).forEach(function(type) {
@@ -185,13 +185,13 @@ var searchTransforms = function(_, esConfig) {
         unionNetworkExpansion.clauses.push({
           isOptional: false,
           predicate: type,
-          variable: '?' + type
+          variable: "?" + type
         });
 
         template.clauses[0].clauses.push({
           isOptional: false,
           predicate: type,
-          variable: '?' + type
+          variable: "?" + type
         });
       }
     });
@@ -243,9 +243,9 @@ var searchTransforms = function(_, esConfig) {
         if (predicate) {
           selects = [
             {
-              function: 'count',
-              type: 'function',
-              variable: '?' + predicate
+              function: "count",
+              type: "function",
+              variable: "?" + predicate
             }
           ];
 
@@ -253,7 +253,7 @@ var searchTransforms = function(_, esConfig) {
             template.clauses.push({
               isOptional: false,
               predicate: predicate,
-              variable: '?' + predicate
+              variable: "?" + predicate
             });
           }
 
@@ -261,13 +261,13 @@ var searchTransforms = function(_, esConfig) {
             template.clauses[0].clauses.push({
               isOptional: false,
               predicate: predicate,
-              variable: '?' + predicate
+              variable: "?" + predicate
             });
           }
 
           groupBy.variables = [
             {
-              variable: '?' + predicate
+              variable: "?" + predicate
             }
           ];
 
@@ -275,9 +275,9 @@ var searchTransforms = function(_, esConfig) {
             values: [
               {
                 function:
-                  config && config.sortOrder === '_term' ? undefined : 'count',
-                order: config && config.sortOrder === '_term' ? 'asc' : 'desc',
-                variable: '?' + predicate
+                  config && config.sortOrder === "_term" ? undefined : "count",
+                order: config && config.sortOrder === "_term" ? "asc" : "desc",
+                variable: "?" + predicate
               }
             ]
           };
@@ -285,19 +285,19 @@ var searchTransforms = function(_, esConfig) {
 
         return {
           SPARQL: {
-            'group-by': groupBy,
-            'order-by': orderBy,
+            "group-by": groupBy,
+            "order-by": orderBy,
             select: {
               variables: selects
             },
             where: {
               clauses: template.clauses,
               filters: template.filters,
-              type: 'Ad',
-              variable: !isNetworkExpansion ? '?ad' : '?ad2'
+              type: "Ad",
+              variable: !isNetworkExpansion ? "?ad" : "?ad2"
             }
           },
-          type: 'Aggregation'
+          type: "Aggregation"
         };
       };
     },
@@ -335,14 +335,14 @@ var searchTransforms = function(_, esConfig) {
             values: [
               {
                 order: config.sortOrder,
-                variable: '?' + config.sortKey + '_sort'
+                variable: "?" + config.sortKey + "_sort"
               }
             ]
           };
           template.clauses.push({
             isOptional: false,
             predicate: config.sortKey,
-            variable: '?' + config.sortKey + '_sort'
+            variable: "?" + config.sortKey + "_sort"
           });
 
           // If sort by date, add timestamp sort and clauses.
@@ -355,45 +355,45 @@ var searchTransforms = function(_, esConfig) {
           if (dateFields[config.sortKey] && esConfig.timestamp) {
             orderBy.values.push({
               order: config.sortOrder,
-              variable: '?' + esConfig.timestamp + '_sort'
+              variable: "?" + esConfig.timestamp + "_sort"
             });
             orderBy.values.push({
               order: config.sortOrder,
-              variable: '?timestamp_sort'
+              variable: "?timestamp_sort"
             });
             template.clauses.push({
               isOptional: false,
               predicate: esConfig.timestamp,
-              variable: '?' + esConfig.timestamp + '_sort'
+              variable: "?" + esConfig.timestamp + "_sort"
             });
             template.clauses.push({
               isOptional: false,
-              predicate: 'timestamp',
-              variable: '?timestamp_sort'
+              predicate: "timestamp",
+              variable: "?timestamp_sort"
             });
           }
         }
 
         return {
           SPARQL: {
-            'group-by': groupBy,
-            'order-by': orderBy,
+            "group-by": groupBy,
+            "order-by": orderBy,
             select: {
               variables: [
                 {
-                  type: 'simple',
-                  variable: !isNetworkExpansion ? '?ad' : '?ad2'
+                  type: "simple",
+                  variable: !isNetworkExpansion ? "?ad" : "?ad2"
                 }
               ]
             },
             where: {
               clauses: template.clauses,
               filters: template.filters,
-              type: 'Ad',
-              variable: !isNetworkExpansion ? '?ad' : '?ad2'
+              type: "Ad",
+              variable: !isNetworkExpansion ? "?ad" : "?ad2"
             }
           },
-          type: 'Point Fact'
+          type: "Point Fact"
         };
       };
     },
@@ -413,13 +413,14 @@ var searchTransforms = function(_, esConfig) {
           var clauses = response[0].query.SPARQL.where.clauses;
           clauses.forEach(function(clause) {
             if (clause.predicate && clause.constraint && clause._id) {
-              ('' + clause.constraint)
+              ("" + clause.constraint)
                 .toLowerCase()
-                .replace(/\W/g, ' ')
-                .split(' ')
+                .replace(/\W/g, " ")
+                .split(" ")
                 .forEach(function(constraint) {
                   highlights[clause.predicate] =
                     highlights[clause.predicate] || {};
+                  // console.log("constraint", constraint);
                   highlights[clause.predicate][constraint] = clause._id;
                 });
             }
@@ -430,10 +431,10 @@ var searchTransforms = function(_, esConfig) {
                   nestedClause.constraint &&
                   nestedClause._id
                 ) {
-                  ('' + nestedClause.constraint)
+                  ("" + nestedClause.constraint)
                     .toLowerCase()
-                    .replace(/\W/g, ' ')
-                    .split(' ')
+                    .replace(/\W/g, " ")
+                    .split(" ")
                     .forEach(function(constraint) {
                       highlights[nestedClause.predicate] =
                         highlights[nestedClause.predicate] || {};
