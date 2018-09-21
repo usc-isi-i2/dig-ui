@@ -17,10 +17,10 @@
 /* exported entityTransforms */
 /* jshint camelcase:false */
 
-var entityTransforms = (function(_, commonTransforms, esConfig) {
+var entityTransforms = function(_, commonTransforms, esConfig) {
   function getAggregationBuckets(data, name) {
-    if(data && data.aggregations && data.aggregations[name]) {
-      if(data.aggregations[name][name]) {
+    if (data && data.aggregations && data.aggregations[name]) {
+      if (data.aggregations[name][name]) {
         return data.aggregations[name][name].buckets || [];
       }
       return data.aggregations[name].buckets || [];
@@ -42,65 +42,96 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
       link: commonTransforms.getLink(key, config.link, config.type, config.key),
       provenances: [],
       styleClass: config.styleClass,
-      text: commonTransforms.getExtractionDataText(key, value, config.type, (index || 0)),
+      text: commonTransforms.getExtractionDataText(
+        key,
+        value,
+        config.type,
+        index || 0
+      ),
       type: config.key,
       width: config.width
     };
 
-    if(item.provenance && item.provenance.length) {
+    if (item.provenance && item.provenance.length) {
       extraction.provenances = item.provenance.map(function(provenance) {
         return {
-          method: provenance.method + (provenance.source && provenance.source.segment ? ' from ' + provenance.source.segment : ''),
-          text: provenance.source && provenance.source.context ? provenance.source.context.text : 'Not Available'
+          method:
+            provenance.method +
+            (provenance.source && provenance.source.segment
+              ? " from " + provenance.source.segment
+              : ""),
+          text:
+            provenance.source && provenance.source.context
+              ? provenance.source.context.text
+              : "Not Available"
         };
       });
       // Set the confidence to 100 if it is undefined.
-      extraction.confidence = _.isUndefined(extraction.confidence) ? 100 : extraction.confidence;
+      extraction.confidence = _.isUndefined(extraction.confidence)
+        ? 100
+        : extraction.confidence;
     }
 
-    if(config.type !== 'url') {
+    if (config.type !== "url") {
       /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-      var userClassification = '' + item.human_annotation;
+      var userClassification = "" + item.human_annotation;
       /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
       extraction.classifications = {
         type: config.key,
-        user: (userClassification === '1' ? 'positive' : (userClassification === '0' ? 'negative' : undefined))
+        user:
+          userClassification === "1"
+            ? "positive"
+            : userClassification === "0"
+              ? "negative"
+              : undefined
       };
     }
 
-    if(config.type === 'location') {
+    if (config.type === "location") {
       var locationData = commonTransforms.getLocationDataFromKey(key);
       extraction.latitude = locationData.latitude;
       extraction.longitude = locationData.longitude;
       extraction.text = locationData.text;
-      extraction.textAndCountry = locationData.text + (locationData.country ? (', ' + locationData.country) : '');
+      extraction.textAndCountry =
+        locationData.text +
+        (locationData.country ? ", " + locationData.country : "");
     }
 
-    if(config.type === 'image') {
-      extraction.downloadSource = (esConfig ? esConfig.downloadImageUrl : '/') + (esConfig.downloadImageUrl === '/' ? '' : '/') + encodeURIComponent(key);
+    if (config.type === "image") {
+      extraction.downloadSource =
+        (esConfig ? esConfig.downloadImageUrl : "/") +
+        (esConfig.downloadImageUrl === "/" ? "" : "/") +
+        encodeURIComponent(key);
       extraction.source = commonTransforms.getImageUrl(key, esConfig);
     }
 
-    var countLabel = extraction.count ? extraction.count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
-    extraction.textAndCount = extraction.text + (countLabel ? (' (' + countLabel + ')') : '');
+    var countLabel = extraction.count
+      ? extraction.count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+      : "";
+    extraction.textAndCount =
+      extraction.text + (countLabel ? " (" + countLabel + ")" : "");
     return extraction;
   }
 
   function getExtractionsFromList(extractionList, config, hideIcons) {
     var extractionData = extractionList.map(function(item, index) {
-      var confidence = _.isUndefined(item.confidence) ? undefined : (Math.round(Math.min(item.confidence, 1) * 10000.0) / 100.0);
+      var confidence = _.isUndefined(item.confidence)
+        ? undefined
+        : Math.round(Math.min(item.confidence, 1) * 10000.0) / 100.0;
       var extraction = getExtraction(item, config, index, confidence);
-      if(hideIcons) {
+      if (hideIcons) {
         delete extraction.icon;
       }
       return extraction;
     });
-    return extractionData.filter(commonTransforms.getExtractionFilterFunction(config.type));
+    return extractionData.filter(
+      commonTransforms.getExtractionFilterFunction(config.type)
+    );
   }
 
   function getExtractionsFromResult(result, path, config) {
     var data = _.get(result, path, []);
-    return getExtractionsFromList((_.isArray(data) ? data : [data]), config);
+    return getExtractionsFromList(_.isArray(data) ? data : [data], config);
   }
 
   function getHighlightPathList(highlights, result, text) {
@@ -111,30 +142,53 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
     var matchedQueries = result.matched_queries;
     /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
 
-    // If a highlight mapping exists for the text, check the matched queries.
-    if(highlights && text && highlights[text] && matchedQueries && matchedQueries.length) {
-      return matchedQueries.filter(function(path) {
-        return _.startsWith(path, highlights[text]);
-      }).map(function(path) {
-        // Return the path in the matched queries.
-        return path.split(':')[1];
-      });
+    if (!highlights || !text || !matchedQueries || !matchedQueries.length) {
+      return [];
     }
 
-    return [];
+    // If a highlight mapping exists for the text, check the matched queries.
+    var tokens = [];
+    for (var key in highlights) {
+      if (text.indexOf(key) > -1) {
+        tokens.push(key);
+      }
+    }
+    var res = [];
+    for (var token in tokens) {
+      // res.concat(
+      matchedQueries
+        .filter(function(path) {
+          return _.startsWith(path, highlights[tokens[token]]);
+        })
+        .map(function(path) {
+          // Return the path in the matched queries.
+          res.push(path.split(":")[1]);
+          // return path.split(":")[1];
+        });
+      // );
+    }
+    return res;
   }
 
-  function getHighlightPathListFromDataOfType(highlights, itemId, itemText, itemType, result) {
+  function getHighlightPathListFromDataOfType(
+    highlights,
+    itemId,
+    itemText,
+    itemType,
+    result
+  ) {
     var wordsOrPhrases = [];
-    if(itemType === 'location') {
+    if (itemType === "location") {
       // Add the city name.
-      wordsOrPhrases = [itemId.substring(0, itemId.indexOf(':'))];
-    } else if(itemType === 'phone') {
+      wordsOrPhrases = [itemId.substring(0, itemId.indexOf(":"))];
+    } else if (itemType === "phone") {
       // Add the phone without punctuation.
-      wordsOrPhrases = [itemText, itemText.replace(/\W/g, '')];
+      wordsOrPhrases = [itemText, itemText.replace(/\W/g, "")];
     } else {
       // Add the full text and all single words in the text.  Remove all punctuation so we can separate the words.
-      wordsOrPhrases = [itemText].concat(itemText.replace(/\W/g, ' ').split(' '));
+      wordsOrPhrases = [itemText].concat(
+        itemText.replace(/\W/g, " ").split(" ")
+      );
     }
 
     var highlightPaths = {};
@@ -152,47 +206,70 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
   function checkHighlightedText(text, type) {
     // TODO Do we have to hard-code <em> or can we make it a config variable?
     // Ignore partial matches for emails and websites.
-    if((type === 'email' || type === 'tld' || type === 'url') && (!_.startsWith(text, '<em>') || !_.endsWith(text, '</em>'))) {
+    if (
+      (type === "email" || type === "tld" || type === "url") &&
+      (!_.startsWith(text, "<em>") || !_.endsWith(text, "</em>"))
+    ) {
       return false;
     }
 
     var output = text;
 
     // Usernames are formatted "<website> <username>".  Ignore matches on the <website>.
-    if(type === 'username') {
-      if(output.indexOf(' ')) {
-        var startHighlight = (output.indexOf('<em>') === 0);
-        output = (startHighlight ? '<em>' : '') + output.substring(output.indexOf(' ') + 1);
+    if (type === "username") {
+      if (output.indexOf(" ")) {
+        var startHighlight = output.indexOf("<em>") === 0;
+        output =
+          (startHighlight ? "<em>" : "") +
+          output.substring(output.indexOf(" ") + 1);
       }
     }
 
     // Return whether the given text has both start and end tags.
-    return output.indexOf('<em>') >= 0 && output.indexOf('</em>') >= 0 ? !!(output.replace(/<\/?em\>/g, '')) : false;
+    return output.indexOf("<em>") >= 0 && output.indexOf("</em>") >= 0
+      ? !!output.replace(/<\/?em\>/g, "")
+      : false;
   }
 
   function getHighlightedText(highlightsPathList, resultHighlights, type) {
+    // console.log("getHighlightedText", highlightsPathList, resultHighlights);
     var textList = [];
-    if(resultHighlights) {
+    if (resultHighlights) {
       // Find the highlighted text in the result highlights using a highlights path.  Use the first because they are all the same.
       (highlightsPathList || []).forEach(function(path) {
         (resultHighlights[path] || []).forEach(function(text) {
-          if(checkHighlightedText(text, type)) {
+          if (checkHighlightedText(text, type)) {
+            // console.log("text", text);
             textList.push(text);
           }
         });
       });
     }
-    return textList.length ? textList[0] : '';
+    return textList.length ? textList[0] : "";
   }
 
-  function getHighlightedExtractionObjectFromResult(result, config, highlights) {
+  function getHighlightedExtractionObjectFromResult(
+    result,
+    config,
+    highlights
+  ) {
     var data = getExtractionsFromResult(result, config.extractionField, config);
-    if(highlights) {
+    if (highlights) {
       data = data.map(function(item) {
         // Get the paths from the highlight mapping to search in the result highlights specifically for the given item.
-        var pathList = getHighlightPathListFromDataOfType(highlights[config.key], ('' + item.id).toLowerCase(), ('' + item.text).toLowerCase(), config.type, result);
+        var pathList = getHighlightPathListFromDataOfType(
+          highlights[config.key],
+          ("" + item.id).toLowerCase(),
+          ("" + item.text).toLowerCase(),
+          config.type,
+          result
+        );
         // The highlight in the extraction object is a boolean (YES or NO).
-        item.highlight = !!(getHighlightedText(pathList, result.highlight, config.type));
+        item.highlight = !!getHighlightedText(
+          pathList,
+          result.highlight,
+          config.type
+        );
         return item;
       });
     }
@@ -213,70 +290,92 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
     var tags = _.get(result, path, {});
     return _.keys(tags).reduce(function(object, tag) {
       /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-      var userClassification = '' + tags[tag].human_annotation;
+      var userClassification = "" + tags[tag].human_annotation;
       /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
       object[tag] = {
-        type: 'result',
-        user: (userClassification === '1' ? 'positive' : (userClassification === '0' ? 'negative' : undefined))
+        type: "result",
+        user:
+          userClassification === "1"
+            ? "positive"
+            : userClassification === "0"
+              ? "negative"
+              : undefined
       };
       return object;
     }, {});
   }
 
   function getTitlesOrDescriptions(type, searchFields, result, highlights) {
-    var titleOrDescriptionList = searchFields.filter(function(searchFieldsObject) {
-      return searchFieldsObject.result === type;
-    }).reduce(function(list, searchFieldsObject) {
-      var data = _.get(result, searchFieldsObject.extractionField);
-      if(_.isArray(data)) {
-        return list.concat(data.map(function(dataItem) {
-          return {
+    var titleOrDescriptionList = searchFields
+      .filter(function(searchFieldsObject) {
+        return searchFieldsObject.result === type;
+      })
+      .reduce(function(list, searchFieldsObject) {
+        var data = _.get(result, searchFieldsObject.extractionField);
+        if (_.isArray(data)) {
+          return list.concat(
+            data.map(function(dataItem) {
+              return {
+                key: searchFieldsObject.key,
+                link: !!searchFieldsObject.link,
+                name: searchFieldsObject.title,
+                text: dataItem.value
+              };
+            })
+          );
+        }
+        if (_.isObject(data)) {
+          return list.concat({
             key: searchFieldsObject.key,
             link: !!searchFieldsObject.link,
             name: searchFieldsObject.title,
-            text: dataItem.value
-          };
-        }));
-      }
-      if(_.isObject(data)) {
+            text: data.value
+          });
+        }
         return list.concat({
           key: searchFieldsObject.key,
           link: !!searchFieldsObject.link,
           name: searchFieldsObject.title,
-          text: data.value
+          text: data
         });
-      }
-      return list.concat({
-        key: searchFieldsObject.key,
-        link: !!searchFieldsObject.link,
-        name: searchFieldsObject.title,
-        text: data
-      });
-    }, []);
+      }, []);
 
     return titleOrDescriptionList.map(function(titleOrDescription) {
-      var text = (titleOrDescription.text || '');
+      var text = titleOrDescription.text || "";
 
       // Do not split the title/description into individual words/phrases or else matching extraction highlights may overwrite the title/description text.
-      var pathList = highlights ? getHighlightPathList(highlights[titleOrDescription.key], result, text.toLowerCase()) : [];
+      var pathList = highlights
+        ? getHighlightPathList(
+            highlights[titleOrDescription.key],
+            result,
+            text.toLowerCase()
+          )
+        : [];
       var highlight = getHighlightedText(pathList, result.highlight, type);
 
-      var backupPath = (type === 'title' ? 'content_extraction.title.text' : 'content_extraction.content_strict.text');
-      var backupHighlight = getHighlightedText([backupPath], result.highlight, type);
+      var backupPath =
+        type === "title"
+          ? "content_extraction.title.text"
+          : "content_extraction.content_strict.text";
+      var backupHighlight = getHighlightedText(
+        [backupPath],
+        result.highlight,
+        type
+      );
 
-      if(!highlight && backupHighlight) {
-        text = backupHighlight.replace(/<\/?em>/g, '');
+      if (!highlight && backupHighlight) {
+        text = backupHighlight.replace(/<\/?em>/g, "");
         highlight = backupHighlight;
       }
 
       // Change newlines to breaks and remove repeat newlines.
-      text = text.replace(/[\n\r][\s]*/g, '<br/>');
-      highlight = highlight.replace(/[\n\r][\s]*/g, '<br/>');
+      text = text.replace(/[\n\r][\s]*/g, "<br/>");
+      highlight = highlight.replace(/[\n\r][\s]*/g, "<br/>");
 
-      if(type === 'title') {
+      if (type === "title") {
         // Remove breaks from titles.
-        text = text.replace(/<br\/>/g, '');
-        highlight = highlight.replace(/<br\/>/g, '');
+        text = text.replace(/<br\/>/g, "");
+        highlight = highlight.replace(/<br\/>/g, "");
       }
 
       return {
@@ -309,48 +408,91 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
    * }
    * @return {Object}
    */
-  function createResultObject(result, searchFields, icon, name, styleClass, type, highlights) {
-    var id = _.get(result, esConfig.uid ? ('_source.' + esConfig.uid) : '_id');
+  function createResultObject(
+    result,
+    searchFields,
+    icon,
+    name,
+    styleClass,
+    type,
+    highlights
+  ) {
+    var id = _.get(result, esConfig.uid ? "_source." + esConfig.uid : "_id");
 
-    if(!id) {
+    if (!id) {
       return undefined;
     }
 
     var timestamp;
-    if(esConfig.timestamp) {
-      timestamp = commonTransforms.getFormattedDate(_.get(result, '_source.' + esConfig.timestamp));
-      if(timestamp === 'None') {
-        timestamp = commonTransforms.getFormattedDate(_.get(result, '_source.timestamp'));
+    if (esConfig.timestamp) {
+      timestamp = commonTransforms.getFormattedDate(
+        _.get(result, "_source." + esConfig.timestamp)
+      );
+      if (timestamp === "None") {
+        timestamp = commonTransforms.getFormattedDate(
+          _.get(result, "_source.timestamp")
+        );
       }
     }
 
-    var esDataEndpoint = (esConfig && esConfig.esDataEndpoint ? (esConfig.esDataEndpoint + id) : undefined);
+    var esDataEndpoint =
+      esConfig && esConfig.esDataEndpoint
+        ? esConfig.esDataEndpoint + id
+        : undefined;
 
-    var titles = getTitlesOrDescriptions('title', searchFields, result, highlights);
-    var title = !titles.length ? '' : (!esConfig.showMultipleTitles ? titles[0].text : titles.map(function(title) {
-      return title.text;
-    }).join(' '));
+    var titles = getTitlesOrDescriptions(
+      "title",
+      searchFields,
+      result,
+      highlights
+    );
+    var title = !titles.length
+      ? ""
+      : !esConfig.showMultipleTitles
+        ? titles[0].text
+        : titles
+            .map(function(title) {
+              return title.text;
+            })
+            .join(" ");
 
-    var isLink = !titles.length ? false : (!esConfig.showMultipleTitles ? titles[0].link : titles.every(function(title) {
-      return title.link;
-    }));
+    var isLink = !titles.length
+      ? false
+      : !esConfig.showMultipleTitles
+        ? titles[0].link
+        : titles.every(function(title) {
+            return title.link;
+          });
 
-    var descriptions = getTitlesOrDescriptions('description', searchFields, result, highlights);
-    var description = !descriptions.length ? '' : (!esConfig.showMultipleDescriptions ? descriptions[0].text : descriptions.map(function(description) {
-      return description.text;
-    }).join(' '));
+    var descriptions = getTitlesOrDescriptions(
+      "description",
+      searchFields,
+      result,
+      highlights
+    );
+    var description = !descriptions.length
+      ? ""
+      : !esConfig.showMultipleDescriptions
+        ? descriptions[0].text
+        : descriptions
+            .map(function(description) {
+              return description.text;
+            })
+            .join(" ");
 
     var resultObject = {
       id: id,
-      url: _.get(result, '_source.url'),
-      revisions: esConfig.revisions ? _.get(result, '_source.' + esConfig.revisions) : undefined,
-      timestamp: (timestamp === 'None' ? undefined : timestamp),
+      url: _.get(result, "_source.url"),
+      revisions: esConfig.revisions
+        ? _.get(result, "_source." + esConfig.revisions)
+        : undefined,
+      timestamp: timestamp === "None" ? undefined : timestamp,
       type: type,
       icon: icon,
-      link: isLink ? commonTransforms.getLink(id, 'result') : undefined,
+      link: isLink ? commonTransforms.getLink(id, "result") : undefined,
       name: name,
       styleClass: styleClass,
-      tags: getResultTags(result, '_source.knowledge_graph._tags'),
+      tags: getResultTags(result, "_source.knowledge_graph._tags"),
       esData: esDataEndpoint,
       title: title,
       description: description,
@@ -361,134 +503,198 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
       series: []
     };
 
-    resultObject.highlightedText = !titles.length ? '' : (!esConfig.showMultipleTitles ? titles[0].highlight : titles.map(function(title) {
-      return title.highlight;
-    }).join(' '));
+    resultObject.highlightedText = !titles.length
+      ? ""
+      : !esConfig.showMultipleTitles
+        ? titles[0].highlight
+        : titles
+            .map(function(title) {
+              return title.highlight;
+            })
+            .join(" ");
 
     var finalizeExtractionFunction = function(extractionObject, index) {
       extractionObject.data = extractionObject.data.sort(function(a, b) {
-        if(extractionObject.type === 'date') {
+        if (extractionObject.type === "date") {
           return new Date(a.id) - new Date(b.id);
         }
-        return ('' + a.text).toLowerCase() - ('' + b.text).toLowerCase();
+        return ("" + a.text).toLowerCase() - ("" + b.text).toLowerCase();
       });
 
       // Transform any list of multiple date extractions into a single date range extraction.
-      if(extractionObject.type === 'date' && extractionObject.data.length > 1) {
+      if (
+        extractionObject.type === "date" &&
+        extractionObject.data.length > 1
+      ) {
         var begin = extractionObject.data[0];
         var end = extractionObject.data[extractionObject.data.length - 1];
         var clone = _.cloneDeep(begin);
-        clone.text = 'From ' + begin.text + ' to ' + end.text;
-        clone.provenances = extractionObject.data.reduce(function(provenances, extraction) {
+        clone.text = "From " + begin.text + " to " + end.text;
+        clone.provenances = extractionObject.data.reduce(function(
+          provenances,
+          extraction
+        ) {
           return provenances.concat(extraction.provenances);
-        }, []);
-        clone.count = _.sum(extractionObject.data.map(function(extraction) {
-          return extraction.count;
-        }));
-        var confidences = extractionObject.data.map(function(extraction) {
-          return extraction.confidence;
-        }).filter(function(confidence) {
-          return confidence >= 0;
-        });
-        clone.confidence = (confidences.length ? (_.sum(confidences) / confidences.length) : undefined);
+        },
+        []);
+        clone.count = _.sum(
+          extractionObject.data.map(function(extraction) {
+            return extraction.count;
+          })
+        );
+        var confidences = extractionObject.data
+          .map(function(extraction) {
+            return extraction.confidence;
+          })
+          .filter(function(confidence) {
+            return confidence >= 0;
+          });
+        clone.confidence = confidences.length
+          ? _.sum(confidences) / confidences.length
+          : undefined;
         extractionObject.data = [clone];
       }
 
       // Ignore undefined indexes.
-      if(typeof index !== 'undefined') {
+      if (typeof index !== "undefined") {
         extractionObject.index = index;
       }
 
       return extractionObject;
     };
 
-    resultObject.headerExtractions = searchFields.filter(function(searchFieldsObject) {
-      return searchFieldsObject.result === 'header';
-    }).map(function(searchFieldsObject, index) {
-      return finalizeExtractionFunction(getHighlightedExtractionObjectFromResult(result, searchFieldsObject, highlights), index);
-    }).sort(function(a, b) {
-      if(a.isUrl && !b.isUrl) {
-        return -1;
-      }
-      if(b.isUrl && !a.isUrl) {
-        return 1;
-      }
-      if(a.isDate && !b.isDate) {
-        return -1;
-      }
-      if(b.isDate && !a.isDate) {
-        return 1;
-      }
-      return a.index - b.index;
-    });
+    resultObject.headerExtractions = searchFields
+      .filter(function(searchFieldsObject) {
+        return searchFieldsObject.result === "header";
+      })
+      .map(function(searchFieldsObject, index) {
+        return finalizeExtractionFunction(
+          getHighlightedExtractionObjectFromResult(
+            result,
+            searchFieldsObject,
+            highlights
+          ),
+          index
+        );
+      })
+      .sort(function(a, b) {
+        if (a.isUrl && !b.isUrl) {
+          return -1;
+        }
+        if (b.isUrl && !a.isUrl) {
+          return 1;
+        }
+        if (a.isDate && !b.isDate) {
+          return -1;
+        }
+        if (b.isDate && !a.isDate) {
+          return 1;
+        }
+        return a.index - b.index;
+      });
 
-    resultObject.detailExtractions = searchFields.filter(function(searchFieldsObject) {
-      return searchFieldsObject.result === 'detail';
-    }).map(function(searchFieldsObject) {
-      return finalizeExtractionFunction(getHighlightedExtractionObjectFromResult(result, searchFieldsObject, highlights));
-    });
+    resultObject.detailExtractions = searchFields
+      .filter(function(searchFieldsObject) {
+        return searchFieldsObject.result === "detail";
+      })
+      .map(function(searchFieldsObject) {
+        return finalizeExtractionFunction(
+          getHighlightedExtractionObjectFromResult(
+            result,
+            searchFieldsObject,
+            highlights
+          )
+        );
+      });
 
-    resultObject.nestedExtractions = searchFields.filter(function(searchFieldsObject) {
-      return searchFieldsObject.result === 'nested' && searchFieldsObject.type === 'kg_id';
-    }).map(function(searchFieldsObject) {
-      return finalizeExtractionFunction(getHighlightedExtractionObjectFromResult(result, searchFieldsObject, highlights));
-    });
+    resultObject.nestedExtractions = searchFields
+      .filter(function(searchFieldsObject) {
+        return (
+          searchFieldsObject.result === "nested" &&
+          searchFieldsObject.type === "kg_id"
+        );
+      })
+      .map(function(searchFieldsObject) {
+        return finalizeExtractionFunction(
+          getHighlightedExtractionObjectFromResult(
+            result,
+            searchFieldsObject,
+            highlights
+          )
+        );
+      });
 
     // For now, just get the first field of each type (series, series date, series number, type).
     var seriesField = searchFields.find(function(searchFieldsObject) {
-      return searchFieldsObject.result === 'series' && searchFieldsObject.type === 'kg_id';
+      return (
+        searchFieldsObject.result === "series" &&
+        searchFieldsObject.type === "kg_id"
+      );
     });
     var seriesDateField = searchFields.find(function(searchFieldsObject) {
-      return searchFieldsObject.result === 'series' && searchFieldsObject.type === 'date';
+      return (
+        searchFieldsObject.result === "series" &&
+        searchFieldsObject.type === "date"
+      );
     });
     var seriesNumberField = searchFields.find(function(searchFieldsObject) {
-      return searchFieldsObject.result === 'series' && searchFieldsObject.type === 'number';
+      return (
+        searchFieldsObject.result === "series" &&
+        searchFieldsObject.type === "number"
+      );
     });
     var typeField = searchFields.find(function(searchFieldsObject) {
-      return searchFieldsObject.type === 'type';
+      return searchFieldsObject.type === "type";
     });
 
-    if(seriesField && seriesDateField && seriesNumberField && typeField) {
+    if (seriesField && seriesDateField && seriesNumberField && typeField) {
       var types = _.get(result, typeField.extractionField, []);
-      if(types.some(function(type) {
-        return type.key === 'measure';
-      })) {
-        resultObject.series = [{
-          color: commonTransforms.getHexColor(seriesField.color),
-          id: id,
-          dateField: seriesDateField.field,
-          idField: seriesField.field,
-          numberField: seriesNumberField.field,
-          title: seriesField.title,
-          typeField: typeField.field
-        }];
+      if (
+        types.some(function(type) {
+          return type.key === "measure";
+        })
+      ) {
+        resultObject.series = [
+          {
+            color: commonTransforms.getHexColor(seriesField.color),
+            id: id,
+            dateField: seriesDateField.field,
+            idField: seriesField.field,
+            numberField: seriesNumberField.field,
+            title: seriesField.title,
+            typeField: typeField.field
+          }
+        ];
       }
     }
 
-    if(esDataEndpoint) {
+    if (esDataEndpoint) {
       resultObject.details.push({
-        name: 'Raw ES Data',
+        name: "Raw ES Data",
         link: esDataEndpoint,
-        text: 'Open'
+        text: "Open"
       });
     }
 
-    if(resultObject.url) {
+    if (resultObject.url) {
       resultObject.details.push({
-        name: 'Url',
+        name: "Url",
         link: resultObject.url,
         text: resultObject.url
       });
     }
 
-    if(resultObject.timestamp) {
+    if (resultObject.timestamp) {
       resultObject.details.push({
-        name: 'Timestamp',
+        name: "Timestamp",
         text: resultObject.timestamp
       });
     }
 
-    (!esConfig.showMultipleDescriptions && descriptions.length ? [descriptions[0]] : descriptions).forEach(function(description) {
+    (!esConfig.showMultipleDescriptions && descriptions.length
+      ? [descriptions[0]]
+      : descriptions
+    ).forEach(function(description) {
       resultObject.details.push({
         name: description.name,
         highlightedText: description.highlight || description.text,
@@ -496,220 +702,311 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
       });
     });
 
-    if(!esConfig.hideCachedPage) {
+    if (!esConfig.hideCachedPage) {
       resultObject.details.push({
-        name: 'Cached Page',
-        link: commonTransforms.getLink(id, 'cached'),
-        text: 'Open in New Tab (Runs External Code)'
+        name: "Cached Page",
+        link: commonTransforms.getLink(id, "cached"),
+        text: "Open in New Tab (Runs External Code)"
       });
     }
 
     // The images should be undefined by default.
-    var images = _.get(result, '_source.objects');
-    resultObject.images = images ? getExtractionsFromList(_.uniqBy(images.map(function(object) {
-      /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-      var id = object.img_sha1;
-      /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
-      return {
-        key: id
-      };
-    }), 'key'), esConfig.imageField || {}) : undefined;
+    var images = _.get(result, "_source.objects");
+    resultObject.images = images
+      ? getExtractionsFromList(
+          _.uniqBy(
+            images.map(function(object) {
+              /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+              var id = object.img_sha1;
+              /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+              return {
+                key: id
+              };
+            }),
+            "key"
+          ),
+          esConfig.imageField || {}
+        )
+      : undefined;
 
     return resultObject;
   }
 
   function getWebpageResultObject(result, searchFields, highlights) {
-    return createResultObject(result, searchFields, esConfig.webpageField.icon, esConfig.webpageField.title, esConfig.webpageField.styleClass, 'webpage', highlights);
+    return createResultObject(
+      result,
+      searchFields,
+      esConfig.webpageField.icon,
+      esConfig.webpageField.title,
+      esConfig.webpageField.styleClass,
+      "webpage",
+      highlights
+    );
   }
 
   function getQueryResultObject(result, searchFields, extractionId) {
-    var searchFieldsObject = _.find((searchFields || []), function(object) {
+    var searchFieldsObject = _.find(searchFields || [], function(object) {
       return object.key === extractionId;
     });
-    if(!searchFieldsObject) {
+    if (!searchFieldsObject) {
       return undefined;
     }
-    return createResultObject(result, searchFields, searchFieldsObject.icon, searchFieldsObject.title, searchFieldsObject.styleClass, searchFieldsObject.key);
+    return createResultObject(
+      result,
+      searchFields,
+      searchFieldsObject.icon,
+      searchFieldsObject.title,
+      searchFieldsObject.styleClass,
+      searchFieldsObject.key
+    );
   }
 
-  function createHistogram(buckets, entityConfig, interval, timeStringBegin, timeStringEnd, unidentifiedBucketName) {
-    var timeBegin = timeStringBegin ? commonTransforms.getDateForInterval(timeStringBegin, interval).getTime() : null;
-    var timeEnd = timeStringEnd ? commonTransforms.getDateForInterval(timeStringEnd, interval).getTime() : null;
+  function createHistogram(
+    buckets,
+    entityConfig,
+    interval,
+    timeStringBegin,
+    timeStringEnd,
+    unidentifiedBucketName
+  ) {
+    var timeBegin = timeStringBegin
+      ? commonTransforms.getDateForInterval(timeStringBegin, interval).getTime()
+      : null;
+    var timeEnd = timeStringEnd
+      ? commonTransforms.getDateForInterval(timeStringEnd, interval).getTime()
+      : null;
 
     var bucketDateToData = buckets.reduce(function(dateToData, dateBucket) {
       /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
       var count = dateBucket.doc_count;
       /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
 
-      if(count) {
+      if (count) {
         var date = commonTransforms.getFormattedDate(dateBucket.key, interval);
-        var data = (entityConfig && dateBucket[entityConfig.key] && dateBucket[entityConfig.key].buckets) ? dateBucket[entityConfig.key].buckets : [];
+        var data =
+          entityConfig &&
+          dateBucket[entityConfig.key] &&
+          dateBucket[entityConfig.key].buckets
+            ? dateBucket[entityConfig.key].buckets
+            : [];
 
-        if(!dateToData[date]) {
+        if (!dateToData[date]) {
           dateToData[date] = {
             count: count,
             data: data
           };
         } else {
           dateToData[date].count += count;
-          dateToData[date].data = dateToData[date].data.concat(data.reduce(function(uniqueData, item) {
-            if(!dateToData[date].data.some(function(existingItem) {
-              return existingItem.key === item.key;
-            })) {
-              uniqueData.push(item);
-            }
-            return uniqueData;
-          }, []));
+          dateToData[date].data = dateToData[date].data.concat(
+            data.reduce(function(uniqueData, item) {
+              if (
+                !dateToData[date].data.some(function(existingItem) {
+                  return existingItem.key === item.key;
+                })
+              ) {
+                uniqueData.push(item);
+              }
+              return uniqueData;
+            }, [])
+          );
         }
       }
 
       return dateToData;
     }, {});
 
-    return _.keys(bucketDateToData).reduce(function(timeline, date) {
-      var data = bucketDateToData[date].data.map(function(entityBucket, index) {
-        return getExtraction(entityBucket, entityConfig, index);
-      }).filter(commonTransforms.getExtractionFilterFunction(entityConfig ? entityConfig.type : null));
+    return _
+      .keys(bucketDateToData)
+      .reduce(function(timeline, date) {
+        var data = bucketDateToData[date].data
+          .map(function(entityBucket, index) {
+            return getExtraction(entityBucket, entityConfig, index);
+          })
+          .filter(
+            commonTransforms.getExtractionFilterFunction(
+              entityConfig ? entityConfig.type : null
+            )
+          );
 
-      var dateObject = {
-        date: date,
-        data: data
-      };
+        var dateObject = {
+          date: date,
+          data: data
+        };
 
-      var sum = dateObject.data.reduce(function(sum, entityObject) {
-        return sum + entityObject.count;
-      }, 0);
+        var sum = dateObject.data.reduce(function(sum, entityObject) {
+          return sum + entityObject.count;
+        }, 0);
 
-      if(sum < bucketDateToData[date].count) {
-        var countLabel = (bucketDateToData[date].count - sum).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        dateObject.data.push({
-          count: bucketDateToData[date].count - sum,
-          icon: entityConfig ? entityConfig.icon : undefined,
-          styleClass: entityConfig ? entityConfig.styleClass : undefined,
-          text: unidentifiedBucketName,
-          textAndCount: unidentifiedBucketName ? (unidentifiedBucketName + ' (' + (countLabel) + ')') : undefined,
-        });
-      }
+        if (sum < bucketDateToData[date].count) {
+          var countLabel = (bucketDateToData[date].count - sum)
+            .toString()
+            .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+          dateObject.data.push({
+            count: bucketDateToData[date].count - sum,
+            icon: entityConfig ? entityConfig.icon : undefined,
+            styleClass: entityConfig ? entityConfig.styleClass : undefined,
+            text: unidentifiedBucketName,
+            textAndCount: unidentifiedBucketName
+              ? unidentifiedBucketName + " (" + countLabel + ")"
+              : undefined
+          });
+        }
 
-      // The data list may be empty if none match the ID for the entity page.
-      if(dateObject.data.length) {
-        timeline.push(dateObject);
-      }
+        // The data list may be empty if none match the ID for the entity page.
+        if (dateObject.data.length) {
+          timeline.push(dateObject);
+        }
 
-      return timeline;
-    }, []).filter(function(item) {
-      var time = new Date(item.date).getTime();
-      return (timeBegin ? time >= timeBegin : true) && (timeEnd ? time <= timeEnd : true);
-    }).sort(function(a, b) {
-      // Sort oldest first.
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
-    });
+        return timeline;
+      }, [])
+      .filter(function(item) {
+        var time = new Date(item.date).getTime();
+        return (
+          (timeBegin ? time >= timeBegin : true) &&
+          (timeEnd ? time <= timeEnd : true)
+        );
+      })
+      .sort(function(a, b) {
+        // Sort oldest first.
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
   }
 
-  function createSparklines(buckets, showUnidentified, timeBegin, timeEnd, entityConfig, pageConfig, pageId) {
-    if(buckets.length < 2) {
+  function createSparklines(
+    buckets,
+    showUnidentified,
+    timeBegin,
+    timeEnd,
+    entityConfig,
+    pageConfig,
+    pageId
+  ) {
+    if (buckets.length < 2) {
       return [];
     }
 
     var unidentifiedTimeline = {
       icon: entityConfig ? entityConfig.icon : undefined,
-      name: '(Unidentified)',
+      name: "(Unidentified)",
       styleClass: entityConfig ? entityConfig.styleClass : undefined,
       points: []
     };
 
-    var timelines = buckets.reduce(function(timelines, dateBucket) {
-      var date = commonTransforms.getFormattedDate(dateBucket.key);
+    var timelines = buckets
+      .reduce(function(timelines, dateBucket) {
+        var date = commonTransforms.getFormattedDate(dateBucket.key);
 
-      /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-      var count = dateBucket.doc_count;
-      /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
+        /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
+        var count = dateBucket.doc_count;
+        /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
 
-      if(count && date) {
-        var sum = 0;
+        if (count && date) {
+          var sum = 0;
 
-        if(entityConfig && dateBucket[entityConfig.key] && dateBucket[entityConfig.key].buckets) {
-          dateBucket[entityConfig.key].buckets.map(function(entityBucket, index) {
-            return getExtraction(entityBucket, entityConfig, index);
-          }).filter(commonTransforms.getExtractionFilterFunction(entityConfig.type)).forEach(function(dataItem) {
-            var timelineIndex = _.findIndex(timelines, function(timelineItem) {
-              return timelineItem.name === dataItem.text;
-            });
+          if (
+            entityConfig &&
+            dateBucket[entityConfig.key] &&
+            dateBucket[entityConfig.key].buckets
+          ) {
+            dateBucket[entityConfig.key].buckets
+              .map(function(entityBucket, index) {
+                return getExtraction(entityBucket, entityConfig, index);
+              })
+              .filter(
+                commonTransforms.getExtractionFilterFunction(entityConfig.type)
+              )
+              .forEach(function(dataItem) {
+                var timelineIndex = _.findIndex(timelines, function(
+                  timelineItem
+                ) {
+                  return timelineItem.name === dataItem.text;
+                });
 
-            if(timelineIndex < 0) {
-              timelines.push({
-                icon: dataItem.icon,
-                id: dataItem.id,
-                link: dataItem.link,
-                maxCount: 0,
-                name: dataItem.text,
-                styleClass: dataItem.styleClass,
-                points: []
+                if (timelineIndex < 0) {
+                  timelines.push({
+                    icon: dataItem.icon,
+                    id: dataItem.id,
+                    link: dataItem.link,
+                    maxCount: 0,
+                    name: dataItem.text,
+                    styleClass: dataItem.styleClass,
+                    points: []
+                  });
+                  timelineIndex = timelines.length - 1;
+                }
+
+                timelines[timelineIndex].points.push({
+                  count: dataItem.count,
+                  date: date
+                });
+
+                timelines[timelineIndex].maxCount = Math.max(
+                  timelines[timelineIndex].maxCount,
+                  dataItem.count
+                );
+
+                sum += dataItem.count;
               });
-              timelineIndex = timelines.length - 1;
-            }
+          }
 
-            timelines[timelineIndex].points.push({
-              count: dataItem.count,
+          if (sum < count) {
+            unidentifiedTimeline.points.push({
+              count: count - sum,
               date: date
             });
+          }
+        }
 
-            timelines[timelineIndex].maxCount = Math.max(timelines[timelineIndex].maxCount, dataItem.count);
+        return timelines;
+      }, [])
+      .sort(function(a, b) {
+        // Sort the page item to the top.
+        if (entityConfig && pageConfig && entityConfig.key === pageConfig.key) {
+          if (a.id === pageId) {
+            return -1;
+          }
+          if (b.id === pageId) {
+            return 1;
+          }
+        }
 
-            sum += dataItem.count;
+        // Sort the other items by max count and then alphabetically.
+        if (a.maxCount !== b.maxCount) {
+          return a.maxCount > b.maxCount ? -1 : 1;
+        }
+
+        if (a.name.localeCompare) {
+          return a.name.localeCompare(b.name, undefined, {
+            numeric: true
           });
         }
 
-        if(sum < count) {
-          unidentifiedTimeline.points.push({
-            count: count - sum,
-            date: date
-          });
-        }
-      }
+        return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+      });
 
-      return timelines;
-    }, []).sort(function(a, b) {
-      // Sort the page item to the top.
-      if(entityConfig && pageConfig && entityConfig.key === pageConfig.key) {
-        if(a.id === pageId) {
-          return -1;
-        }
-        if(b.id === pageId) {
-          return 1;
-        }
-      }
-
-      // Sort the other items by max count and then alphabetically.
-      if(a.maxCount !== b.maxCount) {
-        return a.maxCount > b.maxCount ? -1 : 1;
-      }
-
-      if(a.name.localeCompare) {
-        return a.name.localeCompare(b.name, undefined, {
-          numeric: true
-        });
-      }
-
-      return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
-    });
-
-    if(showUnidentified && unidentifiedTimeline.points.length) {
+    if (showUnidentified && unidentifiedTimeline.points.length) {
       timelines.push(unidentifiedTimeline);
     }
 
-    return timelines.map(function(timelineItem) {
-      timelineItem.points = timelineItem.points.filter(function(item) {
-        var time = new Date(item.date).getTime();
-        return (timeBegin ? time >= timeBegin : true) && (timeEnd ? time <= timeEnd : true);
-      }).sort(function(a, b) {
-        // Sort oldest points first.
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
+    return timelines
+      .map(function(timelineItem) {
+        timelineItem.points = timelineItem.points
+          .filter(function(item) {
+            var time = new Date(item.date).getTime();
+            return (
+              (timeBegin ? time >= timeBegin : true) &&
+              (timeEnd ? time <= timeEnd : true)
+            );
+          })
+          .sort(function(a, b) {
+            // Sort oldest points first.
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+          });
+        return timelineItem;
+      })
+      .filter(function(timelineItem) {
+        return timelineItem.points.length > 1;
       });
-      return timelineItem;
-    }).filter(function(timelineItem) {
-      return timelineItem.points.length > 1;
-    });
   }
 
   return {
@@ -720,10 +1017,10 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      * @return {String}
      */
     cache: function(data) {
-      if(data && data.hits && data.hits.hits && data.hits.hits.length) {
-        return _.get(data.hits.hits[0], '_source.raw_content', '');
+      if (data && data.hits && data.hits.hits && data.hits.hits.length) {
+        return _.get(data.hits.hits[0], "_source.raw_content", "");
       }
-      return '';
+      return "";
     },
 
     /**
@@ -733,7 +1030,12 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      * @return {String}
      */
     entityPageLinkForImageId: function(id) {
-      return commonTransforms.getLink(id, esConfig.imageField.link, esConfig.imageField.type, esConfig.imageField.key);
+      return commonTransforms.getLink(
+        id,
+        esConfig.imageField.link,
+        esConfig.imageField.type,
+        esConfig.imageField.key
+      );
     },
 
     /**
@@ -744,8 +1046,15 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      * @return {Array}
      */
     extractions: function(data, config) {
-      return getExtractionsFromList(getAggregationBuckets(data, config.entity.key), config.entity, true).filter(function(extraction) {
-        var result = config.id && config.page && config.page.type === config.entity.key ? extraction.id !== config.id : true;
+      return getExtractionsFromList(
+        getAggregationBuckets(data, config.entity.key),
+        config.entity,
+        true
+      ).filter(function(extraction) {
+        var result =
+          config.id && config.page && config.page.type === config.entity.key
+            ? extraction.id !== config.id
+            : true;
         return result;
       });
     },
@@ -758,7 +1067,7 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      * @return {Array}
      */
     maps: function(result, searchFields) {
-      if(!result || !result.headerExtractions || !result.detailExtractions) {
+      if (!result || !result.headerExtractions || !result.detailExtractions) {
         return undefined;
       }
 
@@ -767,22 +1076,26 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
       });
 
       return locationFields.reduce(function(info, searchFieldsObject) {
-        var headerIndex = _.findIndex(result.headerExtractions, function(extraction) {
+        var headerIndex = _.findIndex(result.headerExtractions, function(
+          extraction
+        ) {
           return extraction.key === searchFieldsObject.key;
         });
 
-        if(headerIndex >= 0) {
+        if (headerIndex >= 0) {
           info.push({
             config: searchFieldsObject,
             data: result.headerExtractions[headerIndex].data
           });
         }
 
-        var detailIndex = _.findIndex(result.detailExtractions, function(extraction) {
+        var detailIndex = _.findIndex(result.detailExtractions, function(
+          extraction
+        ) {
           return extraction.key === searchFieldsObject.key;
         });
 
-        if(detailIndex >= 0) {
+        if (detailIndex >= 0) {
           info.push({
             config: searchFieldsObject,
             data: result.detailExtractions[headerIndex].data
@@ -801,12 +1114,18 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      * @return {Object}
      */
     nestedResults: function(data, config) {
-      if(data && data.hits && data.hits.hits && data.hits.hits.length) {
-        var returnData = data.hits.hits.map(function(result) {
-          return getQueryResultObject(result, config.searchFields, config.extractionId);
-        }).filter(function(object) {
-          return !_.isUndefined(object);
-        });
+      if (data && data.hits && data.hits.hits && data.hits.hits.length) {
+        var returnData = data.hits.hits
+          .map(function(result) {
+            return getQueryResultObject(
+              result,
+              config.searchFields,
+              config.extractionId
+            );
+          })
+          .filter(function(object) {
+            return !_.isUndefined(object);
+          });
         return returnData.reduce(function(collection, result) {
           collection[result.id] = result;
           return collection;
@@ -823,7 +1142,7 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      * @return {Object}
      */
     result: function(data, searchFields) {
-      if(data && data.hits && data.hits.hits && data.hits.hits.length) {
+      if (data && data.hits && data.hits.hits && data.hits.hits.length) {
         return getWebpageResultObject(data.hits.hits[0], searchFields) || {};
       }
       return {};
@@ -837,13 +1156,19 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      * @return {Array}
      */
     results: function(data, searchFields) {
-      if(data && data.hits && data.hits.hits && data.hits.hits.length) {
-        var returnData = data.hits.hits.map(function(result) {
-          // Data returned by the searchResults function from the searchTransforms will have a "highlights" property.
-          return getWebpageResultObject(result, searchFields, data.highlights);
-        }).filter(function(object) {
-          return !_.isUndefined(object);
-        });
+      if (data && data.hits && data.hits.hits && data.hits.hits.length) {
+        var returnData = data.hits.hits
+          .map(function(result) {
+            // Data returned by the searchResults function from the searchTransforms will have a "highlights" property.
+            return getWebpageResultObject(
+              result,
+              searchFields,
+              data.highlights
+            );
+          })
+          .filter(function(object) {
+            return !_.isUndefined(object);
+          });
         return returnData;
       }
       return [];
@@ -858,11 +1183,20 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      */
     searchPageTimeline: function(data, config) {
       var buckets = getAggregationBuckets(data, config.name);
-      if(buckets.length > 1) {
+      if (buckets.length > 1) {
         return {
-          begin: commonTransforms.getFormattedDate(config.begin || buckets[0].key),
-          end: commonTransforms.getFormattedDate(config.end || buckets[buckets.length - 1].key),
-          sparklines: createSparklines(buckets, true, (config.begin ? new Date(config.begin).getTime() : null), (config.end ? new Date(config.end).getTime() : null))
+          begin: commonTransforms.getFormattedDate(
+            config.begin || buckets[0].key
+          ),
+          end: commonTransforms.getFormattedDate(
+            config.end || buckets[buckets.length - 1].key
+          ),
+          sparklines: createSparklines(
+            buckets,
+            true,
+            config.begin ? new Date(config.begin).getTime() : null,
+            config.end ? new Date(config.end).getTime() : null
+          )
         };
       }
       return {
@@ -878,21 +1212,23 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      * @return {Array}
      */
     series: function(data, config) {
-      if(data && data.hits && data.hits.hits && data.hits.hits.length) {
+      if (data && data.hits && data.hits.hits && data.hits.hits.length) {
         /* jscs:disable requireCamelCaseOrUpperCaseIdentifiers */
-        var buckets = data.hits.hits.reduce(function(bucketsInLoop, result) {
-          var dates = _.get(result, config.dateField, []);
-          var numbers = _.get(result, config.numberField, []);
-          for(var i = 0; i < Math.min(dates.length, numbers.length); ++i) {
-            bucketsInLoop.push({
-              key: dates[i].key,
-              doc_count: parseFloat(numbers[i].key)
-            });
-          }
-          return bucketsInLoop;
-        }, []).filter(function(bucket) {
-          return bucket.key && bucket.doc_count;
-        });
+        var buckets = data.hits.hits
+          .reduce(function(bucketsInLoop, result) {
+            var dates = _.get(result, config.dateField, []);
+            var numbers = _.get(result, config.numberField, []);
+            for (var i = 0; i < Math.min(dates.length, numbers.length); ++i) {
+              bucketsInLoop.push({
+                key: dates[i].key,
+                doc_count: parseFloat(numbers[i].key)
+              });
+            }
+            return bucketsInLoop;
+          }, [])
+          .filter(function(bucket) {
+            return bucket.key && bucket.doc_count;
+          });
         /* jscs:enable requireCamelCaseOrUpperCaseIdentifiers */
         return createHistogram(buckets, {}, config.interval);
       }
@@ -909,12 +1245,31 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
      */
     timelines: function(data, config) {
       var buckets = getAggregationBuckets(data, config.name);
-      if(buckets.length > 1) {
+      if (buckets.length > 1) {
         return {
-          begin: commonTransforms.getFormattedDate(config.begin || buckets[0].key),
-          end: commonTransforms.getFormattedDate(config.end || buckets[buckets.length - 1].key),
-          histogram: createHistogram(buckets, config.entity, config.interval, config.begin, config.end, config.unidentified || '(Unidentified)'),
-          sparklines: createSparklines(buckets, false, null, null, config.entity, config.page, config.id)
+          begin: commonTransforms.getFormattedDate(
+            config.begin || buckets[0].key
+          ),
+          end: commonTransforms.getFormattedDate(
+            config.end || buckets[buckets.length - 1].key
+          ),
+          histogram: createHistogram(
+            buckets,
+            config.entity,
+            config.interval,
+            config.begin,
+            config.end,
+            config.unidentified || "(Unidentified)"
+          ),
+          sparklines: createSparklines(
+            buckets,
+            false,
+            null,
+            null,
+            config.entity,
+            config.page,
+            config.id
+          )
         };
       }
       return {
@@ -923,4 +1278,4 @@ var entityTransforms = (function(_, commonTransforms, esConfig) {
       };
     }
   };
-});
+};
